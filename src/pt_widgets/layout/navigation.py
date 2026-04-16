@@ -15,6 +15,9 @@ class Focusable(Protocol):
     
     def focus(self) -> None:
         ...
+        
+    def unfocus(self) -> None:
+        ...
 
 
 def is_focusable(container: AnyContainer) -> bool:
@@ -42,9 +45,17 @@ def focus(container: AnyContainer) -> None:
         raise FocusException("This container is not focusable")
     
     get_app().layout.focus(c)
+
+def unfocus(container: AnyContainer) -> None:
+    if isinstance(container, Focusable):
+        container.unfocus()
+    
+    c = to_container(container)
+    if isinstance(c, Focusable):
+        c.unfocus()
             
     
-class VerticalLayout(HSplit):
+class VerticalLayout:
     def __init__(
         self,
         children: Sequence[AnyContainer],
@@ -66,7 +77,10 @@ class VerticalLayout(HSplit):
         up_filter: Filter = Always(),
         down_filter: Filter = Always(),
     ) -> None:
-        super().__init__(
+        self.up_filter = up_filter
+        self.down_filter = down_filter
+        
+        self.container = HSplit(
             children=children,
             window_too_small=window_too_small,
             padding=padding,
@@ -76,30 +90,34 @@ class VerticalLayout(HSplit):
             height=height,
             z_index=z_index,
             modal=modal,
-            key_bindings=key_bindings,
+            key_bindings=self._register_key_bindings(key_bindings),
             style=style,
             align=align,
         )
-        
+
+        self.widgets = children
         self.focusable = focusable
         self.cyclic = cyclic
         self._last_focus: int = base_focus
-        self.up_filter = up_filter
-        self.down_filter = down_filter
         self.shift_point = shift_point
+        self.active = False
         
-        self._register_key_bindings()
     
     # Focusable
     def is_focusable(self) -> bool:
         return self.focusable
     
     def focus(self) -> None:
+        self.active = True
         self.move_focus_up(0)
+    
+    def unfocus(self) -> None:
+        self.active = False
+        unfocus(self.widgets[self._last_focus])
     
     @property
     def _focusable_children_indices(self) -> list[int]:
-        return [i for i, c in enumerate(self.get_children()) if is_focusable(c)]
+        return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
     
     def move_focus_up(self, amount: int = 1) -> None:
         focusable_indices = self._focusable_children_indices
@@ -114,8 +132,9 @@ class VerticalLayout(HSplit):
         else:
             base_index = (-1) % len(focusable_indices)
         
-        if not get_app().layout.has_focus(self):
-            focus(self.get_children()[focusable_indices[base_index]])
+        if not self.active:
+            self._last_focus = focusable_indices[base_index]
+            focus(self.widgets[focusable_indices[base_index]])
         else:
             base_index -= amount
             if self.cyclic:
@@ -124,9 +143,10 @@ class VerticalLayout(HSplit):
                 base_index = 0
             elif base_index >= len(focusable_indices):
                 base_index = len(focusable_indices) - 1
-                
+            
+            unfocus(self.widgets[self._last_focus])
             self._last_focus = focusable_indices[base_index]
-            focus(self.get_children()[focusable_indices[base_index]])
+            focus(self.widgets[focusable_indices[base_index]])
     
     def move_focus_down(self, amount: int = 1) -> None:
         focusable_indices = self._focusable_children_indices
@@ -141,8 +161,9 @@ class VerticalLayout(HSplit):
         else:
             base_index = 0
         
-        if not get_app().layout.has_focus(self):
-            focus(self.get_children()[focusable_indices[base_index]])
+        if not self.active:
+            self._last_focus = focusable_indices[base_index]
+            focus(self.widgets[focusable_indices[base_index]])
         else:
             base_index += amount
             if self.cyclic:
@@ -152,30 +173,33 @@ class VerticalLayout(HSplit):
             elif base_index >= len(focusable_indices):
                 base_index = len(focusable_indices) - 1
             
+            unfocus(self.widgets[self._last_focus])
             self._last_focus = focusable_indices[base_index]
-            focus(self.get_children()[focusable_indices[base_index]])
+            focus(self.widgets[focusable_indices[base_index]])
         
-    def _register_key_bindings(self) -> None:
-        if not self.key_bindings:
-            self.key_bindings = KeyBindings()
-
+    def _register_key_bindings(self, kb: KeyBindingsBase | None) -> KeyBindingsBase:
+        if kb is None:
+            kb = KeyBindings()
+        
         default_bindings = KeyBindings()
         
         @Condition
         def up_filter() -> bool:
-            if self._focusable_children_indices:
+            fc = self._focusable_children_indices
+            if fc:
                 if self.cyclic:
                     return True
-                if not get_app().layout.has_focus(self.get_children()[self._focusable_children_indices[0]]):
+                if self._last_focus > 0:
                     return True
             return False
 
         @Condition
         def down_filter() -> bool:
-            if self._focusable_children_indices:
+            fc = self._focusable_children_indices
+            if fc:
                 if self.cyclic:
                     return True
-                if not get_app().layout.has_focus(self.get_children()[self._focusable_children_indices[-1]]):
+                if self._last_focus < len(self.widgets) - 1:
                     return True
             return False
         
@@ -183,26 +207,28 @@ class VerticalLayout(HSplit):
         def shift_point_filter() -> bool:
             return self.shift_point
         
-        default_bindings.add("up", filter=up_filter and self.up_filter)
+        @default_bindings.add("up", filter=up_filter & self.up_filter)
         def _(event: KeyPressEvent):
             self.move_focus_up()
         
-        default_bindings.add("down", filter=down_filter and self.down_filter)
+        @default_bindings.add("down", filter=down_filter & self.down_filter)
         def _(event: KeyPressEvent):
             self.move_focus_down()
         
         
-        default_bindings.add("s-up", filter=up_filter and self.up_filter and shift_point_filter)
+        @default_bindings.add("s-up", filter=up_filter & self.up_filter & shift_point_filter)
         def _(event: KeyPressEvent):
             self.move_focus_up()
         
-        default_bindings.add("s-down", filter=down_filter and self.down_filter and shift_point_filter)
+        @default_bindings.add("s-down", filter=down_filter & self.down_filter & shift_point_filter)
         def _(event: KeyPressEvent):
             self.move_focus_down()
         
-        self.key_bindings = merge_key_bindings([self.key_bindings, default_bindings])
+        return merge_key_bindings([kb, default_bindings])
 
-        
+    
+    def __pt_container__(self):
+        return self.container
         
         
 
