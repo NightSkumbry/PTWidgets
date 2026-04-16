@@ -2,7 +2,7 @@ from typing import Callable, NamedTuple, Sequence, override, Protocol, runtime_c
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.filters import Always, Condition, Filter
-from prompt_toolkit.key_binding import KeyBindings, KeyBindingsBase, KeyPressEvent
+from prompt_toolkit.key_binding import KeyBindings, KeyBindingsBase, KeyPressEvent, merge_key_bindings
 from prompt_toolkit.layout import AnyContainer, AnyDimension, HSplit, VerticalAlign, Container, to_container
 
 from pt_widgets.exceptions import FocusException
@@ -61,6 +61,7 @@ class VerticalLayout(HSplit):
         style: str | Callable[[], str] = "",
         focusable: bool = True,
         cyclic: bool = False,
+        shift_point: bool = False,
         base_focus: int = 0,
         up_filter: Filter = Always(),
         down_filter: Filter = Always(),
@@ -85,6 +86,7 @@ class VerticalLayout(HSplit):
         self._last_focus: int = base_focus
         self.up_filter = up_filter
         self.down_filter = down_filter
+        self.shift_point = shift_point
         
         self._register_key_bindings()
     
@@ -177,13 +179,30 @@ class VerticalLayout(HSplit):
                     return True
             return False
         
+        @Condition
+        def shift_point_filter() -> bool:
+            return self.shift_point
+        
         default_bindings.add("up", filter=up_filter and self.up_filter)
         def _(event: KeyPressEvent):
             self.move_focus_up()
         
         default_bindings.add("down", filter=down_filter and self.down_filter)
-        def _(event):
+        def _(event: KeyPressEvent):
             self.move_focus_down()
+        
+        
+        default_bindings.add("s-up", filter=up_filter and self.up_filter and shift_point_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_up()
+        
+        default_bindings.add("s-down", filter=down_filter and self.down_filter and shift_point_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_down()
+        
+        self.key_bindings = merge_key_bindings([self.key_bindings, default_bindings])
+
+        
         
         
 
