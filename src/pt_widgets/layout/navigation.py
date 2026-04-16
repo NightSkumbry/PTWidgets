@@ -15,6 +15,7 @@ from prompt_toolkit.layout import (
 )
 
 from pt_widgets.exceptions import FocusException
+from pt_widgets.layout.containers import GridSplit
 
 
 @runtime_checkable
@@ -414,5 +415,86 @@ class HorizontalLayout:
     
     def __pt_container__(self):
         return self.container
+
+
+class GridLayout:
+    def __init__(
+        self,
+        children: Sequence[Sequence[AnyContainer]],
+        window_too_small: Container | None = None,
+        vertical_align: VerticalAlign = VerticalAlign.JUSTIFY,
+        horizontal_align: HorizontalAlign = HorizontalAlign.JUSTIFY,
+        padding_width: AnyDimension = 0,
+        padding_height: AnyDimension = 0,
+        padding_char: str | None = None,
+        padding_style: str = "",
+        width: AnyDimension = None,
+        height: AnyDimension = None,
+        z_index: int | None = None,
+        modal: bool = False,
+        key_bindings: KeyBindingsBase | None = None,
+        style: str | Callable[[], str] = "",
+        focusable: bool = True,
+        cyclic_horizontal: bool = False,
+        cyclic_vertical: bool = False,
+        shift_point: bool = False,
+        base_focus: tuple[int, int] = (0, 0),
+        left_filter: Filter = Always(),
+        right_filter: Filter = Always(),
+        up_filter: Filter = Always(),
+        down_filter: Filter = Always(),
+    ) -> None:
+        self.left_filter = left_filter
+        self.right_filter = right_filter
+        self.up_filter = up_filter
+        self.down_filter = down_filter
         
+        self.container = GridSplit(
+            children=children,
+            window_too_small=window_too_small,
+            vertical_align=vertical_align,
+            horizontal_align=horizontal_align,
+            padding_width=padding_width,
+            padding_height=padding_height,
+            padding_char=padding_char,
+            padding_style=padding_style,
+            width=width,
+            height=height,
+            z_index=z_index,
+            modal=modal,
+            key_bindings=self._register_key_bindings(key_bindings),
+            style=style,
+        )
         
+        self.widgets = children
+        self.focusable = focusable
+        self.cyclic_horizontal = cyclic_horizontal
+        self.cyclic_vertical = cyclic_vertical
+        self._last_focus: tuple[int, int] = base_focus
+        self.shift_point = shift_point
+        self.active = False
+    
+    # Focusable
+    def is_focusable(self) -> bool:
+        return self.focusable
+    
+    def focus(self) -> None:
+        self.active = True
+        self.move_focus_up(0)
+    
+    def unfocus(self) -> None:
+        self.active = False
+        unfocus(self.widgets[self._last_focus[0]][self._last_focus[1]])
+        
+    @property
+    def _focusable_children_indices(self) -> list[tuple[int, int]]:
+        res = []
+        for i, row in enumerate(self.widgets):
+            for j, c in enumerate(row):
+                if is_focusable(c):
+                    res.append((i, j))
+        return res
+
+    
+    
+    
