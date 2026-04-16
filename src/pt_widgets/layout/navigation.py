@@ -199,7 +199,7 @@ class VerticalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus > 0:
+                if self._last_focus > self._focusable_children_indices[0]:
                     return True
             return False
 
@@ -209,7 +209,7 @@ class VerticalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus < len(self.widgets) - 1:
+                if self._last_focus < self._focusable_children_indices[-1]:
                     return True
             return False
         
@@ -375,7 +375,7 @@ class HorizontalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus > 0:
+                if self._last_focus > self._focusable_children_indices[0]:
                     return True
             return False
 
@@ -385,7 +385,7 @@ class HorizontalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus < len(self.widgets) - 1:
+                if self._last_focus < self._focusable_children_indices[-1]:
                     return True
             return False
         
