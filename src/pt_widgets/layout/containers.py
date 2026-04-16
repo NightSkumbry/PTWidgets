@@ -1,6 +1,5 @@
 from functools import singledispatch
-from abc import ABC, abstractmethod
-from typing import Callable, Sequence, override
+from typing import Callable, Sequence, override, Protocol, runtime_checkable
 
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.cache import SimpleCache
@@ -28,28 +27,33 @@ from prompt_toolkit.layout.mouse_handlers import MouseHandlers
 from prompt_toolkit.utils import take_using_weights, to_str
 
 
-class WidgetContainer(Container, ABC):
+@runtime_checkable
+class WidgetContainer(Protocol):
     def get_horizontal_write_positions(
         self,
         write_position: WritePosition
     ) -> list[WritePosition] | None:
-        return [write_position]
+        ...
     
     def get_vertical_write_positions(
         self,
         write_position: WritePosition
     ) -> list[WritePosition] | None:
-        return [write_position]
+        ...
     
 
-def get_vertical_write_positions(container: Container,
+def get_vertical_write_positions(container: AnyContainer,
     write_position: WritePosition
 ) -> list[WritePosition] | None:
+    if isinstance(container, WidgetContainer):
+        return container.get_vertical_write_positions(write_position)
     return _get_vertical_write_positions(to_container(container), write_position)
 
-def get_horizontal_write_positions(container: Container,
+def get_horizontal_write_positions(container: AnyContainer,
     write_position: WritePosition
 ) -> list[WritePosition] | None:
+    if isinstance(container, WidgetContainer):
+        return container.get_horizontal_write_positions(write_position)
     return _get_horizontal_write_positions(to_container(container), write_position)
 
 
@@ -141,7 +145,7 @@ def _(
     return wp
 
 
-class GridSplit(WidgetContainer):
+class GridSplit(Container):
     def __init__(
         self,
         children: Sequence[Sequence[AnyContainer]],
@@ -489,7 +493,6 @@ class GridSplit(WidgetContainer):
 
         return sizes
     
-    @override
     def get_horizontal_write_positions(self, write_position: WritePosition) -> list[WritePosition] | None:
         sizesX = self._divide_widths(write_position.width)
         if not (self.sizeX and self.sizeY):
@@ -521,7 +524,6 @@ class GridSplit(WidgetContainer):
         return res
          
 
-    @override
     def get_vertical_write_positions(self, write_position: WritePosition) -> list[WritePosition] | None:
         sizesX = self._divide_widths(write_position.width)
         if not (self.sizeX and self.sizeY):
