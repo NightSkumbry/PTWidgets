@@ -148,7 +148,8 @@ class GridSplit(WidgetContainer):
         window_too_small: Container | None = None,
         vertical_align: VerticalAlign = VerticalAlign.JUSTIFY,
         horizontal_align: HorizontalAlign = HorizontalAlign.JUSTIFY,
-        padding: AnyDimension = 0,
+        padding_width: AnyDimension = 0,
+        padding_height: AnyDimension = 0,
         padding_char: str | None = None,
         padding_style: str = "",
         width: AnyDimension = None,
@@ -165,7 +166,8 @@ class GridSplit(WidgetContainer):
                 row.append(Window())
         
         self.window_too_small = window_too_small or _window_too_small()
-        self.padding = padding
+        self.padding_width = padding_width
+        self.padding_height = padding_height
         self.padding_char = padding_char
         self.padding_style = padding_style
         
@@ -268,7 +270,8 @@ class GridSplit(WidgetContainer):
                     buff.append(child)
                     buff.append(
                         Window(
-                            width=self.padding,
+                            width=self.padding_width,
+                            height=self.padding_height,
                             char=self.padding_char,
                             style=self.padding_style,
                         )
@@ -284,7 +287,8 @@ class GridSplit(WidgetContainer):
                 
                 result.append(
                     [Window(
-                        height=self.padding,
+                        height=self.padding_height,
+                        width=self.padding_width,
                         char=self.padding_char,
                         style=self.padding_style,
                     ) for _ in range(self.sizeX*2-1 +
@@ -508,7 +512,7 @@ class GridSplit(WidgetContainer):
         
         i = 0
         for c, width in zip(all_children[0], sizesX):
-            if c == real_children[0][i]:
+            if i < len(real_children) and real_children[0] and c == real_children[0][i]:
                 res.append(WritePosition(xpos, ypos, width, height))
                 i += 1
 
