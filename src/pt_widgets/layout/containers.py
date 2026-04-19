@@ -217,10 +217,11 @@ class GridSplit(Container):
             return sum_layout_dimensions([])
         
         dimensions = []
+        children = self._all_children
         
-        for column in range(self.sizeX):
+        for column in range(len(children[0])):
             dimensions.append(max_layout_dimensions(
-                [r[column].preferred_width(max_available_width) for r in self._all_children]
+                [r[column].preferred_width(max_available_width) for r in children]
             ))
 
         return sum_layout_dimensions(dimensions)
