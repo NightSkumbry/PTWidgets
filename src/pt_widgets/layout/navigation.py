@@ -203,7 +203,7 @@ class VerticalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus > self._focusable_children_indices[0]:
+                if self._last_focus > fc[0]:
                     return True
             return False
 
@@ -213,7 +213,7 @@ class VerticalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus < self._focusable_children_indices[-1]:
+                if self._last_focus < fc[-1]:
                     return True
             return False
         
@@ -379,7 +379,7 @@ class HorizontalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus > self._focusable_children_indices[0]:
+                if self._last_focus > fc[0]:
                     return True
             return False
 
@@ -389,7 +389,7 @@ class HorizontalLayout:
             if fc:
                 if self.cyclic:
                     return True
-                if self._last_focus < self._focusable_children_indices[-1]:
+                if self._last_focus < fc[-1]:
                     return True
             return False
         
@@ -496,7 +496,7 @@ class GridLayout:
         for i, row in enumerate(self.widgets):
             for j, c in enumerate(row):
                 if is_focusable(c):
-                    res.append((i, j))
+                    res.append((j, i))
         return res
 
     def move_focus_left(self, amount: int = 1) -> None:
@@ -628,21 +628,23 @@ class GridLayout:
         # horizontal
         @Condition
         def left_filter() -> bool:
-            fc = self._focusable_children_indices
+            last_x, last_y = self._last_focus
+            fc = [i[0] for i in self._focusable_children_indices if i[1] == last_y]
             if fc:
                 if self.cyclic_horizontal:
                     return True
-                if self._last_focus > self._focusable_children_indices[0]:
+                if last_x > fc[0]:
                     return True
             return False
 
         @Condition
         def right_filter() -> bool:
-            fc = self._focusable_children_indices
+            last_x, last_y = self._last_focus
+            fc = [i[0] for i in self._focusable_children_indices if i[1] == last_y]
             if fc:
                 if self.cyclic_horizontal:
                     return True
-                if self._last_focus < self._focusable_children_indices[-1]:
+                if last_x < fc[-1]:
                     return True
             return False
         
@@ -670,21 +672,23 @@ class GridLayout:
         # Vertical
         @Condition
         def up_filter() -> bool:
-            fc = self._focusable_children_indices
+            last_x, last_y = self._last_focus
+            fc = [i[1] for i in self._focusable_children_indices if i[0] == last_x]
             if fc:
                 if self.cyclic_vertical:
                     return True
-                if self._last_focus > self._focusable_children_indices[0]:
+                if last_y > fc[0]:
                     return True
             return False
 
         @Condition
         def down_filter() -> bool:
-            fc = self._focusable_children_indices
+            last_x, last_y = self._last_focus
+            fc = [i[1] for i in self._focusable_children_indices if i[0] == last_x]
             if fc:
                 if self.cyclic_vertical:
                     return True
-                if self._last_focus < self._focusable_children_indices[-1]:
+                if last_y < fc[-1]:
                     return True
             return False
         
