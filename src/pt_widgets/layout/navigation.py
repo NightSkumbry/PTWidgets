@@ -555,4 +555,64 @@ class GridLayout:
             self._last_focus = focusable_indices[base_index], last_y
             focus(self.widgets[last_y][focusable_indices[base_index]])
     
+    def move_focus_up(self, amount: int = 1) -> None:
+        last_x, last_y = self._last_focus
+        focusable_indices = [i[1] for i in self._focusable_children_indices if i[0] == last_x]
+        
+        if not focusable_indices:
+            raise FocusException("No focusable children in this column")
+        
+        for ind, i in enumerate(focusable_indices):
+            if i >= last_y:
+                base_index = ind
+                break
+        else:
+            base_index = (-1) % len(focusable_indices)
+        
+        if not self.active:
+            self._last_focus = last_x, focusable_indices[base_index]
+            focus(self.widgets[focusable_indices[base_index]][last_x])
+        else:
+            base_index -= amount
+            if self.cyclic_vertical:
+                base_index %= len(focusable_indices)
+            elif base_index < 0:
+                base_index = 0
+            elif base_index >= len(focusable_indices):
+                base_index = len(focusable_indices) - 1
+            
+            unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
+            self._last_focus = last_x, focusable_indices[base_index]
+            focus(self.widgets[focusable_indices[base_index]][last_x])
+    
+    def move_focus_down(self, amount: int = 1) -> None:
+        last_x, last_y = self._last_focus
+        focusable_indices = [i[1] for i in self._focusable_children_indices if i[0] == last_x]
+
+        if not focusable_indices:
+            raise FocusException("No focusable children in this column")
+        
+        for ind, i in enumerate(focusable_indices[::-1], 1):
+            if i <= last_y:
+                base_index = len(focusable_indices) - ind
+                break
+        else:
+            base_index = 0
+        
+        if not self.active:
+            self._last_focus = last_x, focusable_indices[base_index]
+            focus(self.widgets[focusable_indices[base_index]][last_x])
+        else:
+            base_index += amount
+            if self.cyclic_vertical:
+                base_index %= len(focusable_indices)
+            elif base_index < 0:
+                base_index = 0
+            elif base_index >= len(focusable_indices):
+                base_index = len(focusable_indices) - 1
+            
+            unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
+            self._last_focus = last_x, focusable_indices[base_index]
+            focus(self.widgets[focusable_indices[base_index]][last_x])
+    
     
