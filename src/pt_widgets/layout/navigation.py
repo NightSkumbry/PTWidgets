@@ -125,6 +125,10 @@ class VerticalLayout:
         self.active = False
         unfocus(self.widgets[self._last_focus])
     
+    # MagicContainer
+    def __pt_container__(self):
+        return self.container
+    
     @property
     def _focusable_children_indices(self) -> list[int]:
         return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
@@ -235,10 +239,6 @@ class VerticalLayout:
             self.move_focus_down()
         
         return merge_key_bindings([kb, default_bindings])
-
-    
-    def __pt_container__(self):
-        return self.container
         
         
 class HorizontalLayout:
@@ -300,6 +300,10 @@ class HorizontalLayout:
     def unfocus(self) -> None:
         self.active = False
         unfocus(self.widgets[self._last_focus])
+    
+    # MagicContainer
+    def __pt_container__(self):
+        return self.container
     
     @property
     def _focusable_children_indices(self) -> list[int]:
@@ -412,10 +416,6 @@ class HorizontalLayout:
         
         return merge_key_bindings([kb, default_bindings])
 
-    
-    def __pt_container__(self):
-        return self.container
-
 
 class GridLayout:
     def __init__(
@@ -485,6 +485,10 @@ class GridLayout:
     def unfocus(self) -> None:
         self.active = False
         unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
+    
+    # MagicContainer
+    def __pt_container__(self):
+        return self.container
         
     @property
     def _focusable_children_indices(self) -> list[tuple[int, int]]:
@@ -614,5 +618,93 @@ class GridLayout:
             unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
             self._last_focus = last_x, focusable_indices[base_index]
             focus(self.widgets[focusable_indices[base_index]][last_x])
-    
+
+    def _register_key_bindings(self, kb: KeyBindingsBase | None) -> KeyBindingsBase:
+        if kb is None:
+            kb = KeyBindings()
+        
+        default_bindings = KeyBindings()
+        
+        # horizontal
+        @Condition
+        def left_filter() -> bool:
+            fc = self._focusable_children_indices
+            if fc:
+                if self.cyclic_horizontal:
+                    return True
+                if self._last_focus > self._focusable_children_indices[0]:
+                    return True
+            return False
+
+        @Condition
+        def right_filter() -> bool:
+            fc = self._focusable_children_indices
+            if fc:
+                if self.cyclic_horizontal:
+                    return True
+                if self._last_focus < self._focusable_children_indices[-1]:
+                    return True
+            return False
+        
+        @Condition
+        def shift_point_filter() -> bool:
+            return self.shift_point
+        
+        @default_bindings.add("left", filter=left_filter & self.left_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_left()
+        
+        @default_bindings.add("right", filter=right_filter & self.right_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_right()
+        
+
+        @default_bindings.add("s-left", filter=left_filter & self.left_filter & shift_point_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_left()
+        
+        @default_bindings.add("s-right", filter=right_filter & self.right_filter & shift_point_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_right()
+            
+        # Vertical
+        @Condition
+        def up_filter() -> bool:
+            fc = self._focusable_children_indices
+            if fc:
+                if self.cyclic_vertical:
+                    return True
+                if self._last_focus > self._focusable_children_indices[0]:
+                    return True
+            return False
+
+        @Condition
+        def down_filter() -> bool:
+            fc = self._focusable_children_indices
+            if fc:
+                if self.cyclic_vertical:
+                    return True
+                if self._last_focus < self._focusable_children_indices[-1]:
+                    return True
+            return False
+        
+        @default_bindings.add("up", filter=up_filter & self.up_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_up()
+        
+        @default_bindings.add("down", filter=down_filter & self.down_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_down()
+        
+
+        @default_bindings.add("s-up", filter=up_filter & self.up_filter & shift_point_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_up()
+        
+        @default_bindings.add("s-down", filter=down_filter & self.down_filter & shift_point_filter)
+        def _(event: KeyPressEvent):
+            self.move_focus_down()
+        
+        return merge_key_bindings([kb, default_bindings])
+
     
