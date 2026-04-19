@@ -115,11 +115,11 @@ class VerticalLayout:
     
     # Focusable
     def is_focusable(self) -> bool:
-        return self.focusable
+        return self.focusable and any(is_focusable(c) for c in self.widgets)
     
     def focus(self) -> None:
         self.active = True
-        self.move_focus_up(0)
+        self.move_focus_up(0) #TODO focus closest
     
     def unfocus(self) -> None:
         self.active = False
@@ -291,11 +291,11 @@ class HorizontalLayout:
     
     # Focusable
     def is_focusable(self) -> bool:
-        return self.focusable
+        return self.focusable and any(is_focusable(c) for c in self.widgets)
     
     def focus(self) -> None:
         self.active = True
-        self.move_focus_left(0)
+        self.move_focus_left(0) #TODO focus closest
     
     def unfocus(self) -> None:
         self.active = False
@@ -476,11 +476,11 @@ class GridLayout:
     
     # Focusable
     def is_focusable(self) -> bool:
-        return self.focusable
+        return self.focusable and any(is_focusable(c) for r in self.widgets for c in r)
     
     def focus(self) -> None:
         self.active = True
-        self.move_focus_up(0)
+        self.move_focus_up(0) #TODO focus closest
     
     def unfocus(self) -> None:
         self.active = False
