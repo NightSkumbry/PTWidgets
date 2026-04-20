@@ -119,7 +119,7 @@ class VerticalLayout:
     
     def focus(self) -> None:
         self.active = True
-        self.move_focus_up(0) #TODO focus closest
+        self._focus_closest()
     
     def unfocus(self) -> None:
         self.active = False
@@ -133,6 +133,12 @@ class VerticalLayout:
     def _focusable_children_indices(self) -> list[int]:
         return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
     
+    def _focus_closest(self) -> None:
+        focusable_indices = self._focusable_children_indices
+        closest = min(focusable_indices, key=lambda i: abs(i - self._last_focus))
+        self._last_focus = closest
+        focus(self.widgets[closest])
+        
     def move_focus_up(self, amount: int = 1) -> None:
         focusable_indices = self._focusable_children_indices
         
@@ -295,7 +301,7 @@ class HorizontalLayout:
     
     def focus(self) -> None:
         self.active = True
-        self.move_focus_left(0) #TODO focus closest
+        self._focus_closest()
     
     def unfocus(self) -> None:
         self.active = False
@@ -308,6 +314,12 @@ class HorizontalLayout:
     @property
     def _focusable_children_indices(self) -> list[int]:
         return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+    
+    def _focus_closest(self) -> None:
+        focusable_indices = self._focusable_children_indices
+        closest = min(focusable_indices, key=lambda i: abs(i - self._last_focus))
+        self._last_focus = closest
+        focus(self.widgets[closest])
     
     def move_focus_left(self, amount: int = 1) -> None:
         focusable_indices = self._focusable_children_indices
@@ -480,7 +492,7 @@ class GridLayout:
     
     def focus(self) -> None:
         self.active = True
-        self.move_focus_up(0) #TODO focus closest
+        self._focus_closest()
     
     def unfocus(self) -> None:
         self.active = False
@@ -492,12 +504,22 @@ class GridLayout:
         
     @property
     def _focusable_children_indices(self) -> list[tuple[int, int]]:
+        """
+        returns (x, y) pairs of focusable children
+        """
+        
         res = []
-        for i, row in enumerate(self.widgets):
-            for j, c in enumerate(row):
+        for y, row in enumerate(self.widgets):
+            for x, c in enumerate(row):
                 if is_focusable(c):
-                    res.append((j, i))
+                    res.append((x, y))
         return res
+
+    def _focus_closest(self) -> None:
+        focusable_indices = self._focusable_children_indices
+        closest = min(focusable_indices, key=lambda i: abs(i[0] - self._last_focus[0]) + abs(i[1] - self._last_focus[1]))
+        self._last_focus = closest
+        focus(self.widgets[closest[1]][closest[0]])
 
     def move_focus_left(self, amount: int = 1) -> None:
         last_x, last_y = self._last_focus
