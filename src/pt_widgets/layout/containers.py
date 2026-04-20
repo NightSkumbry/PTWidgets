@@ -3,6 +3,7 @@ from typing import Callable, Sequence, override, Protocol, runtime_checkable
 
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.cache import SimpleCache
+from prompt_toolkit.filters import FilterOrBool
 from prompt_toolkit.key_binding import KeyBindingsBase
 from prompt_toolkit.layout import (
     AnyDimension,
@@ -21,10 +22,24 @@ from prompt_toolkit.layout.containers import (
     VSplit,
     VerticalAlign,
     _window_too_small,
+    ConditionalContainer as PTConditionalContainer,
+    DynamicContainer as PTDynamicContainer,
 )
 from prompt_toolkit.layout.screen import WritePosition, Screen
 from prompt_toolkit.layout.mouse_handlers import MouseHandlers
 from prompt_toolkit.utils import take_using_weights, to_str
+
+
+class ConditionalContainer(PTConditionalContainer):
+    def __init__(
+        self,
+        content: AnyContainer,
+        filter: FilterOrBool,
+        alternative_content: AnyContainer | None = None,
+    ) -> None:
+        super().__init__(content, filter, alternative_content=alternative_content)
+        self.widget = content
+        self.alternative_widget = alternative_content
 
 
 @runtime_checkable

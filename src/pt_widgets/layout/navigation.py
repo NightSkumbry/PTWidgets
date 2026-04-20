@@ -1,3 +1,4 @@
+from functools import singledispatch
 from typing import Callable, NamedTuple, Sequence, override, Protocol, runtime_checkable
 
 from prompt_toolkit.application import get_app
@@ -12,10 +13,11 @@ from prompt_toolkit.layout import (
     VerticalAlign,
     Container,
     to_container,
+    DynamicContainer,
 )
 
 from pt_widgets.exceptions import FocusException
-from pt_widgets.layout.containers import GridSplit
+from pt_widgets.layout.containers import GridSplit, ConditionalContainer
 
 
 @runtime_checkable
@@ -33,12 +35,29 @@ class Focusable(Protocol):
 def is_focusable(container: AnyContainer) -> bool:
     if isinstance(container, Focusable):
         return container.is_focusable()
+    return _is_focusable(to_container(container))
 
-    c = to_container(container)
-    if isinstance(c, Focusable):
-        return c.is_focusable()
-    
+@singledispatch
+def _is_focusable(container: Container) -> bool:
+    if isinstance(container, Focusable):
+        return container.is_focusable()
     return False
+
+@_is_focusable.register(ConditionalContainer)
+def _(container: ConditionalContainer) -> bool:
+    if container.filter():
+        return is_focusable(container.widget)
+    elif container.alternative_widget is not None:
+        return is_focusable(container.alternative_widget)
+    return False
+
+@_is_focusable.register(DynamicContainer)
+def _(container: DynamicContainer) -> bool:
+    widget = container.get_container()
+    if widget is not None:
+        return is_focusable(widget)
+    return False
+
 
 def focus(container: AnyContainer) -> None:
     if isinstance(container, Focusable):
@@ -46,23 +65,66 @@ def focus(container: AnyContainer) -> None:
             container.focus()
             return
         raise FocusException("This container is not focusable")
-    
-    c = to_container(container)
-    if isinstance(c, Focusable):
-        if c.is_focusable():
-            c.focus()
+    _focus(to_container(container))
+
+@singledispatch
+def _focus(container: Container) -> None:
+    if isinstance(container, Focusable):
+        if container.is_focusable():
+            container.focus()
             return
         raise FocusException("This container is not focusable")
+    get_app().layout.focus(container)
+
+@_focus.register(ConditionalContainer)
+def _(container: ConditionalContainer) -> None:
+    if container.filter():
+        widget = container.widget
+    elif container.alternative_widget is not None:
+        widget = container.alternative_widget
+    else:
+        raise FocusException("This ConditionalContainer is currently hidden")
     
-    get_app().layout.focus(c)
+    if isinstance(widget, Focusable):
+        if widget.is_focusable():
+            widget.focus()
+            return
+        raise FocusException("This container is not focusable")
+    _focus(to_container(widget))
+
+@_focus.register(DynamicContainer)
+def _(container: DynamicContainer) -> None:
+    widget = container.get_container()
+    if isinstance(widget, Focusable):
+        if widget.is_focusable():
+            widget.focus()
+            return
+        raise FocusException("This container is not focusable")
+    _focus(to_container(widget))
+
 
 def unfocus(container: AnyContainer) -> None:
     if isinstance(container, Focusable):
         container.unfocus()
-    
-    c = to_container(container)
-    if isinstance(c, Focusable):
-        c.unfocus()
+        return
+    _unfocus(to_container(container))
+
+@singledispatch
+def _unfocus(container: Container) -> None:
+    if isinstance(container, Focusable):
+        container.unfocus()
+
+@_unfocus.register(ConditionalContainer)
+def _(container: ConditionalContainer) -> None:
+    unfocus(container.widget)
+    if container.alternative_widget is not None:
+        unfocus(container.alternative_widget)
+
+@_unfocus.register(DynamicContainer)
+def _(container: DynamicContainer) -> None:
+    widget = container.get_container()
+    if widget is not None:
+        unfocus(widget)
             
     
 class VerticalLayout:
