@@ -8,4 +8,4 @@ build/
 .env
 .vscode/
 .idea/
-tests/
+GEMINI.md
