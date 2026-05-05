@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Callable
 
 from prompt_toolkit.application import get_app
@@ -20,7 +21,7 @@ class Button:
         height: AnyDimension = None,
         style: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
-        state: WidgetState = WidgetState(focusable=True, disabled=False),
+        state: WidgetState | None = None,
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
@@ -40,7 +41,7 @@ class Button:
             disabled="class:pt_widget.brackets.disabled"
         ))
         self._focused = False
-        self.state = state
+        self.state = state if state is not None else WidgetState(focusable=True, disabled=False)
         self.with_left_bracket = with_left_bracket
         self.with_right_bracket = with_right_bracket
 
@@ -56,43 +57,35 @@ class Button:
             style=self._get_style,
         )
         
+        def get_bracket_layout(is_right: bool):
+            if not is_right:
+                return VSplit([
+                    Window(
+                        BracketsControl(bracket_type.value(is_right=False)),
+                        style=self.get_brackets_style,
+                        dont_extend_width=True,
+                    ),
+                    Window(width=1, dont_extend_width=True, style=self.get_brackets_style)
+                ])
+            else:
+                return VSplit([
+                    Window(width=1, dont_extend_width=True, style=self.get_brackets_style),
+                    Window(
+                        BracketsControl(bracket_type.value(is_right=True)),
+                        style=self.get_brackets_style,
+                        dont_extend_width=True,
+                    )
+                ])
+
         self.layout = VSplit(
             [
                 ConditionalContainer(
-                    content=VSplit([
-                        Window(
-                            BracketsControl(
-                                bracket_type.value(is_right=False),
-                            ),
-                            style=self.get_brackets_style,
-                            dont_extend_width=True,
-                        ),
-                        Window(
-                            content=None,
-                            dont_extend_width=True,
-                            style=self.get_brackets_style,
-                            width=1,
-                        ),
-                    ],),
+                    content=get_bracket_layout(False),
                     filter=Condition(self._with_left_bracket),
                 ),
                 self.control,
                 ConditionalContainer(
-                    content=VSplit([
-                        Window(
-                            content=None,
-                            dont_extend_width=True,
-                            style=self.get_brackets_style,
-                            width=1,
-                        ),
-                        Window(
-                            BracketsControl(
-                                bracket_type.value(is_right=True),
-                            ),
-                            style=self.get_brackets_style,
-                            dont_extend_width=True,
-                        ),
-                    ],),
+                    content=get_bracket_layout(True),
                     filter=Condition(self._with_right_bracket),
                 ),
             ],
@@ -147,4 +140,6 @@ class Button:
 
     def _with_right_bracket(self) -> bool:
         return to_bool(self.with_right_bracket)
+
+
 
