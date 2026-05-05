@@ -15,11 +15,13 @@ from pt_widgets.widgets.common import BoolOrCallable, WidgetState, WidgetStyle, 
 
 class SwitchType(Enum):
     CHECK = (' ', '✓')
-    CIRCLE = ('○', '●')
+    CIRCLE = ('○', '◉')
+    FULL_CIRCLE = ('○', '●')
+    BOX = ('□', '▣')
+    FULL_BOX = ('□', '■')
     SLIDING_CIRCLE = ('(○-)', '(-●)')
     TICK_IN_BOX = ('☐', '☑')
     CROSS_IN_BOX = ('☐', '☒')
-    FULL_BLOCK = ('[□]', '[■]')
     HALF_BLOCK = ('[▌]', '[▐]')
 
 
@@ -207,3 +209,83 @@ class Switch:
 
     def _with_right_bracket(self) -> bool:
         return to_bool(self.with_right_bracket)
+
+
+class Checkbox(Switch):
+    def __init__(
+        self,
+        text: AnyFormattedText = "",
+        text_on: AnyFormattedText | None = None,
+        handler: Callable[[bool], None] | None = None,
+        switch_type: Union[SwitchType, tuple[str, str]] = SwitchType.BOX,
+        switch_before_text: bool = True,
+        width: AnyDimension = None,
+        height: AnyDimension = None,
+        style: WidgetStyle | None = None,
+        style_on: WidgetStyle | None = None,
+        switch_style: WidgetStyle | None = None,
+        switch_style_on: WidgetStyle | None = None,
+        brackets_style: WidgetStyle | None = None,
+        state: WidgetState | None = None,
+        with_left_bracket: BoolOrCallable = False,
+        with_right_bracket: BoolOrCallable = False,
+        bracket_type: BracketType = BracketType.SQUARE,
+    ) -> None:
+        super().__init__(
+            text=text,
+            text_on=text_on,
+            handler=handler,
+            switch_type=switch_type,
+            switch_before_text=switch_before_text,
+            width=width,
+            height=height,
+            style=style,
+            style_on=style_on,
+            switch_style=switch_style,
+            switch_style_on=switch_style_on,
+            brackets_style=brackets_style,
+            state=state,
+            with_left_bracket=with_left_bracket,
+            with_right_bracket=with_right_bracket,
+            bracket_type=bracket_type,
+        )
+
+
+class RadioButton(Switch):
+    def __init__(
+        self,
+        text: AnyFormattedText = "",
+        text_on: AnyFormattedText | None = None,
+        handler: Callable[[bool], None] | None = None,
+        switch_type: Union[SwitchType, tuple[str, str]] = SwitchType.CIRCLE,
+        switch_before_text: bool = True,
+        width: AnyDimension = None,
+        height: AnyDimension = None,
+        style: WidgetStyle | None = None,
+        style_on: WidgetStyle | None = None,
+        switch_style: WidgetStyle | None = None,
+        switch_style_on: WidgetStyle | None = None,
+        brackets_style: WidgetStyle | None = None,
+        state: WidgetState | None = None,
+        with_left_bracket: BoolOrCallable = False,
+        with_right_bracket: BoolOrCallable = False,
+        bracket_type: BracketType = BracketType.SQUARE,
+    ) -> None:
+        super().__init__(
+            text=text,
+            text_on=text_on,
+            handler=handler,
+            switch_type=switch_type,
+            switch_before_text=switch_before_text,
+            width=width,
+            height=height,
+            style=style,
+            style_on=style_on,
+            switch_style=switch_style,
+            switch_style_on=switch_style_on,
+            brackets_style=brackets_style,
+            state=state,
+            with_left_bracket=with_left_bracket,
+            with_right_bracket=with_right_bracket,
+            bracket_type=bracket_type,
+        )

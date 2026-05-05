@@ -98,7 +98,7 @@ def run():
         Label("Switches:"),
         Switch("Dark Mode", state=state4),
         Switch("Notifications", switch_type=SwitchType.TICK_IN_BOX, switch_before_text=True),
-        Switch("Feature X", text_on="Feature X (ENABLED)", switch_type=SwitchType.FULL_BLOCK),
+        Switch("Feature X", text_on="Feature X (ENABLED)", switch_type=SwitchType.BOX),
         
         HorizontalLayout([
             Label("Volume:"),
