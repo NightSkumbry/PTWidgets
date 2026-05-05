@@ -2,6 +2,7 @@ from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.styles import Style
+from pt_widgets.widgets.brackets import BracketType
 from pt_widgets.widgets.button import Button
 from pt_widgets.widgets.label import Label
 from pt_widgets.layout.navigation import VerticalLayout, HorizontalLayout
@@ -35,19 +36,21 @@ def run():
         state.disabled = True
 
     btn1 = Button(
-        "Toggle Buttons 2 & 3",
+        "Toggle\n Buttons 2 & 3",
         handler=toggle_2_3,
         with_left_bracket=True,
         with_right_bracket=True,
-        state=state1
+        state=state1,
+        bracket_type=BracketType.CURLY
     )
     
     btn2 = Button(
-        "Disable Me",
+        "Disable\n Me",
         handler=lambda: disable_self(state2),
         with_left_bracket=True,
         with_right_bracket=True,
-        state=state2
+        state=state2,
+        bracket_type=BracketType.PARENTHESIS
     )
     
     # Кнопка, меняющая свой текст
@@ -89,7 +92,7 @@ def run():
             Button("Right", with_right_bracket=True),
         ], padding=1),
         Label("Focusable label (rare, but possible):"),
-        Label("[ Focus me! ]", state=WidgetState(focusable=True, disabled=False)),
+        Label("[ Focus me! ]", state=WidgetState(focusable=True, disabled=False), with_left_bracket=True, with_right_bracket=True),
     ], padding=1)
 
     kb = KeyBindings()

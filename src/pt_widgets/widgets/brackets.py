@@ -81,3 +81,9 @@ class BracketsControl(ExpandableControl):
         min_height: int = 1,
     ):
         super().__init__(content_generator, style, 1, min_height)
+
+class BracketType(Enum):
+    PARENTHESIS = ParenthesisContentGenerator
+    SQUARE = SquareBracketsContentGenerator
+    CURLY = CurlyBracketsContentGenerator
+    
