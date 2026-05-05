@@ -14,6 +14,8 @@ from .common import (
     to_bool,
 )
 
+from .label import Label
+
 __all__ = [
     "BaseBracketContentGenerator",
     "ParenthesisContentGenerator",
@@ -25,4 +27,5 @@ __all__ = [
     "BoolOrCallable",
     "to_bool",
     "BracketsControl",
+    "Label",
 ]
