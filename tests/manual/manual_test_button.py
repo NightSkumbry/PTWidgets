@@ -2,75 +2,85 @@ from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.styles import Style
-from pt_widgets.widgets.brackets import BracketType
 from pt_widgets.widgets.button import Button
 from pt_widgets.widgets.label import Label
+from pt_widgets.widgets.switch import Switch, SwitchType
 from pt_widgets.layout.navigation import VerticalLayout, HorizontalLayout
 from pt_widgets.widgets.common import WidgetState, WidgetStyle
 
 def run():
     # Определяем стили для виджетов
     style = Style.from_dict({
-        "pt_widget.button": "fg:white bg:blue",
-        "pt_widget.button.focused": "fg:black bg:yellow",
-        "pt_widget.button.disabled": "fg:gray bg:black",
-
-        "pt_widget.label": "fg:green",
-        "pt_widget.label.focused": "fg:black bg:green",
-        
-        "pt_widget.brackets": "fg:cyan bg:blue",
-        "pt_widget.brackets.focused": "fg:red bg:yellow",
-        "pt_widget.brackets.disabled": "fg:gray bg:black",
+        # Кнопки
+        "pt_widget.button": "fg:ansiblue bg:ansigray",
+        "pt_widget.button.focused": "fg:ansiyellow bg:ansiblue",
+        "pt_widget.button.disabled": "fg:ansigray bg:ansiblack",
+        # Метки
+        "pt_widget.label": "fg:ansiwhite",
+        "pt_widget.label.focused": "fg:ansiblack bg:ansiwhite",
+        "pt_widget.label.disabled": "fg:ansigray",
+        # Переключатели (Текст)
+        "pt_widget.switch.text": "fg:ansiwhite",
+        "pt_widget.switch.text.focused": "fg:ansiblack bg:ansiyellow",
+        "pt_widget.switch.text.disabled": "fg:ansigray",
+        "pt_widget.switch.text.on": "fg:ansigreen bold",
+        "pt_widget.switch.text.on.focused": "fg:ansiyellow bg:ansigreen",
+        "pt_widget.switch.text.on.disabled": "fg:ansidarkgreen nobold",
+        # Переключатели (Тумблер)
+        "pt_widget.switch.toggle": "fg:ansired",
+        "pt_widget.switch.toggle.focused": "fg:ansired bg:ansiyellow",
+        "pt_widget.switch.toggle.disabled": "fg:ansidarkred",
+        "pt_widget.switch.toggle.on": "fg:ansibrightgreen",
+        "pt_widget.switch.toggle.on.focused": "fg:ansibrightgreen bg:ansiyellow",
+        "pt_widget.switch.toggle.on.disabled": "fg:ansigreen",
+        # Скобки
+        "pt_widget.brackets": "fg:ansicyan",
+        "pt_widget.brackets.focused": "fg:ansiwhite bg:ansiblue",
+        "pt_widget.brackets.disabled": "fg:ansicyan",
     })
 
     # Состояния для кнопок, чтобы они могли отключать друг друга
     state1 = WidgetState(focusable=True, disabled=False)
     state2 = WidgetState(focusable=True, disabled=False)
     state3 = WidgetState(focusable=True, disabled=False)
+    
+    state4 = WidgetState(True, False, checked=True)
 
     def toggle_2_3():
         state2.disabled = not state2.disabled
         state3.disabled = not state3.disabled
-
-    def disable_self(state):
-        state.disabled = True
+        state4.disabled = not state4.disabled
+        
 
     btn1 = Button(
-        "Toggle\n Buttons 2 & 3",
+        "Toggle Buttons 2 & 3",
         handler=toggle_2_3,
         with_left_bracket=True,
         with_right_bracket=True,
-        state=state1,
-        bracket_type=BracketType.CURLY
+        state=state1
     )
     
     btn2 = Button(
-        "Disable\n Me",
-        handler=lambda: disable_self(state2),
+        "Disable Me",
+        handler=lambda: setattr(state2, 'disabled', True),
         with_left_bracket=True,
         with_right_bracket=True,
-        state=state2,
-        bracket_type=BracketType.PARENTHESIS
+        state=state2
     )
     
-    # Кнопка, меняющая свой текст
     btn3 = Button(
         "I am Button 3",
+        handler=lambda: setattr(btn3, 'text', "Ouch! You clicked me!"),
         with_left_bracket=True,
         with_right_bracket=True,
         state=state3
     )
     
-    def btn3_handler():
-        btn3.text = "Ouch! You clicked me!"
-    
-    btn3.handler = btn3_handler
-
     def reset_handler():
-        state1.disabled = False
-        state2.disabled = False
-        state3.disabled = False
-        btn3.text = "I am Button 3"
+        setattr(state1, 'disabled', False)
+        setattr(state2, 'disabled', False)
+        setattr(state3, 'disabled', False)
+        setattr(btn3, 'text', "I am Button 3")
 
     btn_reset = Button(
         "Reset All",
@@ -81,18 +91,22 @@ def run():
 
     layout = VerticalLayout([
         Label("=== PTWidgets Manual Test ===", style=WidgetStyle(base="fg:ansiyellow bold")),
-        Label("This is a simple non-focusable label."),
-        btn1,
-        btn2,
-        btn3,
-        btn_reset,
+        
+        Label("Buttons:"),
+        HorizontalLayout([btn1, btn2, btn3, btn_reset], padding=1),
+
+        Label("Switches:"),
+        Switch("Dark Mode", state=state4),
+        Switch("Notifications", switch_type=SwitchType.TICK_IN_BOX, switch_before_text=True),
+        Switch("Feature X", text_on="Feature X (ENABLED)", switch_type=SwitchType.FULL_BLOCK),
+        
         HorizontalLayout([
-            Button("Left", with_left_bracket=True),
-            Label("|", style=WidgetStyle(base="fg:gray")),
-            Button("Right", with_right_bracket=True),
+            Label("Volume:"),
+            Switch("Mute", switch_type=("( )", "(#)"), with_left_bracket=False, with_right_bracket=False),
         ], padding=1),
-        Label("Focusable label (rare, but possible):"),
-        Label("[ Focus me! ]", state=WidgetState(focusable=True, disabled=False), with_left_bracket=True, with_right_bracket=True),
+
+        Label("Focusable label:"),
+        Label("[ Focus me! ]", state=WidgetState(focusable=True, disabled=False)),
     ], padding=1)
 
     kb = KeyBindings()

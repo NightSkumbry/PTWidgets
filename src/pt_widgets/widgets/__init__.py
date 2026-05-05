@@ -15,6 +15,10 @@ from .common import (
 )
 
 from .label import Label
+from .switch import (
+    Switch,
+    SwitchType,
+)
 
 __all__ = [
     "BaseBracketContentGenerator",
@@ -28,4 +32,7 @@ __all__ = [
     "to_bool",
     "BracketsControl",
     "Label",
+    "Switch",
+    "SwitchType",
 ]
+
