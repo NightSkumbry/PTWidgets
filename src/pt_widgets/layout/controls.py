@@ -3,8 +3,6 @@ from abc import ABC, abstractmethod
 from prompt_toolkit.layout.controls import UIControl, UIContent, StyleAndTextTuples, GetLinePrefixCallable
 from prompt_toolkit.formatted_text import to_formatted_text
 
-from pt_widgets.widgets.Brackets import BaseBracketContentGenerator
-
 
 class ContentGenerator(ABC):
     def init(self, width: int, height: int, style: str) -> None:
@@ -52,15 +50,3 @@ class ExpandableControl(UIControl):
     ) -> int | None:
         return self.min_height
 
-
-class BracketsControl(ExpandableControl):
-    def __init__(
-        self,
-        content_generator: BaseBracketContentGenerator,
-        style: str = "",
-        min_height: int = 1,
-    ):
-        self.content_generator = content_generator
-        self.min_width = 1
-        self.min_height = min_height
-        self.style = style

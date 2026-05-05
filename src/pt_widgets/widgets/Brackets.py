@@ -73,4 +73,11 @@ class CurlyBracketsContentGenerator(BaseBracketContentGenerator):
         return [(self.style, char)]
         
 
-
+class BracketsControl(ExpandableControl):
+    def __init__(
+        self,
+        content_generator: BaseBracketContentGenerator,
+        style: str = "",
+        min_height: int = 1,
+    ):
+        super().__init__(content_generator, style, 1, min_height)
