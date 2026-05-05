@@ -7,7 +7,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import AnyDimension, Container, FormattedTextControl, VSplit, Window
 
 from pt_widgets.layout.containers import ConditionalContainer
-from pt_widgets.widgets.brackets import SquareBracketsContentGenerator, BracketsControl
+from pt_widgets.widgets.brackets import BracketType, BracketsControl
 from pt_widgets.widgets.common import BoolOrCallable, WidgetState, WidgetStyle, combine_styles, to_bool
 
 
@@ -23,6 +23,7 @@ class Button:
         state: WidgetState = WidgetState(focusable=True, disabled=False),
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
+        bracket_type: BracketType = BracketType.SQUARE,
     ) -> None:
         self.text = text
         self.handler = handler
@@ -60,7 +61,7 @@ class Button:
                 ConditionalContainer(
                     content=Window(
                         BracketsControl(
-                            SquareBracketsContentGenerator(is_right=False),
+                            bracket_type.value(is_right=False),
                         ),
                         style=self.get_brackets_style,
                         dont_extend_width=True,
@@ -71,7 +72,7 @@ class Button:
                 ConditionalContainer(
                     content=Window(
                         BracketsControl(
-                            SquareBracketsContentGenerator(is_right=True),
+                            bracket_type.value(is_right=True),
                         ),
                         style=self.get_brackets_style,
                         dont_extend_width=True,
