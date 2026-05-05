@@ -16,7 +16,7 @@ class Label:
         height: AnyDimension = None,
         style: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
-        state: WidgetState = WidgetState(focusable=False, disabled=False),
+        state: WidgetState | None = None,
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
@@ -35,7 +35,7 @@ class Label:
             disabled="class:pt_widget.brackets.disabled"
         ))
         self._focused = False
-        self.state = state
+        self.state = state if state is not None else WidgetState(focusable=False, disabled=False)
         self.with_left_bracket = with_left_bracket
         self.with_right_bracket = with_right_bracket
 
