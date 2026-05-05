@@ -4,7 +4,7 @@ from prompt_toolkit.formatted_text import AnyFormattedText
 from prompt_toolkit.layout import AnyDimension, Container, FormattedTextControl, VSplit, Window
 
 from pt_widgets.layout.containers import ConditionalContainer
-from pt_widgets.widgets.brackets import SquareBracketsContentGenerator, BracketsControl
+from pt_widgets.widgets.brackets import BracketType, BracketsControl
 from pt_widgets.widgets.common import BoolOrCallable, WidgetState, WidgetStyle, combine_styles, to_bool
 
 
@@ -19,6 +19,7 @@ class Label:
         state: WidgetState = WidgetState(focusable=False, disabled=False),
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
+        bracket_type: BracketType = BracketType.SQUARE,
     ) -> None:
         self.text = text
         self.width = width
@@ -52,24 +53,40 @@ class Label:
         self.layout = VSplit(
             [
                 ConditionalContainer(
-                    content=Window(
-                        BracketsControl(
-                            SquareBracketsContentGenerator(is_right=False),
+                    content=VSplit([
+                        Window(
+                            BracketsControl(
+                                bracket_type.value(is_right=False),
+                            ),
+                            style=self.get_brackets_style,
+                            dont_extend_width=True,
                         ),
-                        style=self.get_brackets_style,
-                        dont_extend_width=True,
-                    ),
+                        Window(
+                            content=None,
+                            dont_extend_width=True,
+                            style=self.get_brackets_style,
+                            width=1,
+                        ),
+                    ]),
                     filter=Condition(self._with_left_bracket),
                 ),
                 self.control,
                 ConditionalContainer(
-                    content=Window(
-                        BracketsControl(
-                            SquareBracketsContentGenerator(is_right=True),
+                    content=VSplit([
+                        Window(
+                            content=None,
+                            dont_extend_width=True,
+                            style=self.get_brackets_style,
+                            width=1,
                         ),
-                        style=self.get_brackets_style,
-                        dont_extend_width=True,
-                    ),
+                        Window(
+                            BracketsControl(
+                                bracket_type.value(is_right=True),
+                            ),
+                            style=self.get_brackets_style,
+                            dont_extend_width=True,
+                        ),
+                    ]),
                     filter=Condition(self._with_right_bracket),
                 ),
             ],

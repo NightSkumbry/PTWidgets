@@ -59,24 +59,40 @@ class Button:
         self.layout = VSplit(
             [
                 ConditionalContainer(
-                    content=Window(
-                        BracketsControl(
-                            bracket_type.value(is_right=False),
+                    content=VSplit([
+                        Window(
+                            BracketsControl(
+                                bracket_type.value(is_right=False),
+                            ),
+                            style=self.get_brackets_style,
+                            dont_extend_width=True,
                         ),
-                        style=self.get_brackets_style,
-                        dont_extend_width=True,
-                    ),
+                        Window(
+                            content=None,
+                            dont_extend_width=True,
+                            style=self.get_brackets_style,
+                            width=1,
+                        ),
+                    ],),
                     filter=Condition(self._with_left_bracket),
                 ),
                 self.control,
                 ConditionalContainer(
-                    content=Window(
-                        BracketsControl(
-                            bracket_type.value(is_right=True),
+                    content=VSplit([
+                        Window(
+                            content=None,
+                            dont_extend_width=True,
+                            style=self.get_brackets_style,
+                            width=1,
                         ),
-                        style=self.get_brackets_style,
-                        dont_extend_width=True,
-                    ),
+                        Window(
+                            BracketsControl(
+                                bracket_type.value(is_right=True),
+                            ),
+                            style=self.get_brackets_style,
+                            dont_extend_width=True,
+                        ),
+                    ],),
                     filter=Condition(self._with_right_bracket),
                 ),
             ],
