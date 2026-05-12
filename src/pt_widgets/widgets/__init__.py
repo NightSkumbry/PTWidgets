@@ -18,6 +18,8 @@ from .label import Label
 from .switch import (
     Switch,
     SwitchType,
+    Checkbox,
+    RadioButton,
 )
 
 __all__ = [
@@ -34,5 +36,7 @@ __all__ = [
     "Label",
     "Switch",
     "SwitchType",
+    "Checkbox",
+    "RadioButton",
 ]
 
