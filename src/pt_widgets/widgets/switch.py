@@ -212,6 +212,10 @@ class Switch:
 
 
 class Checkbox(Switch):
+    """
+    Shortcut for different default look
+    """
+    
     def __init__(
         self,
         text: AnyFormattedText = "",
@@ -252,6 +256,10 @@ class Checkbox(Switch):
 
 
 class RadioButton(Switch):
+    """
+    Shortcut for different default look (and can't be disabled by default)
+    """
+    
     def __init__(
         self,
         text: AnyFormattedText = "",
@@ -270,7 +278,9 @@ class RadioButton(Switch):
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
+        can_be_disabled: bool = False,
     ) -> None:
+        self.can_be_disabled = can_be_disabled
         super().__init__(
             text=text,
             text_on=text_on,
@@ -289,3 +299,65 @@ class RadioButton(Switch):
             with_right_bracket=with_right_bracket,
             bracket_type=bracket_type,
         )
+
+    def _get_key_bindings(self) -> KeyBindings:
+        kb = KeyBindings()
+        @kb.add("enter", filter=Condition(lambda: not self.state.disabled and (not self.state.checked or self.can_be_disabled)))
+        def _(event):
+            self.state.checked = not self.state.checked
+            if self.handler:
+                self.handler(self.state.checked)
+        return kb
+
+
+class RadioGroup:
+    def __init__(
+        self,
+        items: dict[str, RadioButton],
+        handler: Callable[[str], None] | None = None
+    ) -> None:
+        self.items = items
+        self.handler = handler
+
+        for name, rb in self.items.items():
+            original_handler = rb.handler
+
+            def make_handler(current_name=name, oh=original_handler):
+                def group_handler(checked: bool):
+                    if oh:
+                        oh(checked)
+                    
+                    if checked:
+                        for other_name, other_rb in self.items.items():
+                            if other_name != current_name:
+                                other_rb.state.checked = False
+                        
+                        if self.handler:
+                            self.handler(current_name)
+                return group_handler
+
+            rb.handler = make_handler()
+
+
+class CheckboxGroup:
+    def __init__(
+        self,
+        items: dict[str, Checkbox],
+        handler: Callable[[str, bool], None] | None = None
+    ) -> None:
+        self.items = items
+        self.handler = handler
+
+        for name, cb in self.items.items():
+            original_handler = cb.handler
+
+            def make_handler(current_name=name, oh=original_handler):
+                def group_handler(checked: bool):
+                    if oh:
+                        oh(checked)
+                        
+                    if self.handler:
+                        self.handler(current_name, checked)
+                return group_handler
+
+            cb.handler = make_handler()
