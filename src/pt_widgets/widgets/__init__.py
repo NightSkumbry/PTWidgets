@@ -22,6 +22,8 @@ from .switch import (
     RadioButton,
 )
 
+from .text_edit import TextEdit
+
 __all__ = [
     "BaseBracketContentGenerator",
     "ParenthesisContentGenerator",
@@ -38,5 +40,6 @@ __all__ = [
     "SwitchType",
     "Checkbox",
     "RadioButton",
+    "TextEdit",
 ]
 
