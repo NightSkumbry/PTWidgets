@@ -44,6 +44,7 @@ class Switch:
         with_left_bracket: BoolOrCallable = True,
         with_right_bracket: BoolOrCallable = True,
         bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
     ) -> None:
         self.text = text
         self.text_on = text_on if text_on is not None else text
@@ -94,7 +95,7 @@ class Switch:
                 self._get_formatted_text,
                 focusable=True,
                 show_cursor=False,
-                key_bindings=self._get_key_bindings(),
+                key_bindings=self._get_key_bindings() if custom_key_bindings is None else custom_key_bindings,
             ),
             dont_extend_height=True,
             dont_extend_width=True,
@@ -234,6 +235,7 @@ class Checkbox(Switch):
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
     ) -> None:
         super().__init__(
             text=text,
@@ -252,6 +254,7 @@ class Checkbox(Switch):
             with_left_bracket=with_left_bracket,
             with_right_bracket=with_right_bracket,
             bracket_type=bracket_type,
+            custom_key_bindings=custom_key_bindings,
         )
 
 
@@ -278,6 +281,7 @@ class RadioButton(Switch):
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
         can_be_disabled: bool = False,
     ) -> None:
         self.can_be_disabled = can_be_disabled
@@ -298,6 +302,7 @@ class RadioButton(Switch):
             with_left_bracket=with_left_bracket,
             with_right_bracket=with_right_bracket,
             bracket_type=bracket_type,
+            custom_key_bindings=custom_key_bindings,
         )
 
     def _get_key_bindings(self) -> KeyBindings:

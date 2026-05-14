@@ -31,6 +31,8 @@ class TextEdit:
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
         edit_bracket_type: BracketType | None = None,
+        custom_button_key_bindings: KeyBindings | None = None,
+        custom_edit_key_bindings: KeyBindings | None = None,
     ) -> None:
         self.multiline = multiline
         self.validator = validator
@@ -80,7 +82,7 @@ class TextEdit:
         self.buffer_control = BufferControl(
             buffer=self.buffer,
             focusable=True,
-            key_bindings=self._get_edit_key_bindings(),
+            key_bindings=self._get_edit_key_bindings() if custom_edit_key_bindings is None else custom_edit_key_bindings,
         )
         
         # Display mode button
@@ -95,6 +97,7 @@ class TextEdit:
             with_left_bracket=with_left_bracket,
             with_right_bracket=with_right_bracket,
             bracket_type=bracket_type,
+            custom_key_bindings=custom_button_key_bindings,
         )
 
         # Main layout
