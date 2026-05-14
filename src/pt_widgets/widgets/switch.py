@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from re import A
 from typing import Callable, Union
@@ -25,6 +26,11 @@ class SwitchType(Enum):
     HALF_BLOCK = ('[▌]', '[▐]')
 
 
+@dataclass
+class SwitchState(WidgetState):
+    checked: bool
+
+
 class Switch:
     def __init__(
         self,
@@ -40,7 +46,7 @@ class Switch:
         switch_style: WidgetStyle | None = None,
         switch_style_on: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
-        state: WidgetState | None = None,
+        state: SwitchState | None = None,
         with_left_bracket: BoolOrCallable = True,
         with_right_bracket: BoolOrCallable = True,
         bracket_type: BracketType = BracketType.SQUARE,
@@ -85,7 +91,7 @@ class Switch:
         ))
 
         self._focused = False
-        self.state = state if state is not None else WidgetState(focusable=True, disabled=False, checked=False)
+        self.state = state if state is not None else SwitchState(focusable=True, disabled=False, checked=False)
         self.with_left_bracket = with_left_bracket
         self.with_right_bracket = with_right_bracket
 
@@ -231,7 +237,7 @@ class Checkbox(Switch):
         switch_style: WidgetStyle | None = None,
         switch_style_on: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
-        state: WidgetState | None = None,
+        state: SwitchState | None = None,
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
@@ -277,7 +283,7 @@ class RadioButton(Switch):
         switch_style: WidgetStyle | None = None,
         switch_style_on: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
-        state: WidgetState | None = None,
+        state: SwitchState | None = None,
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,

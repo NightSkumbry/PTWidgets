@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Callable
 
 from prompt_toolkit.application import get_app
@@ -14,6 +15,13 @@ from pt_widgets.widgets.button import Button
 from pt_widgets.widgets.common import BoolOrCallable, WidgetState, WidgetStyle, combine_styles, to_bool
 
 
+@dataclass
+class TextEditState(WidgetState):
+    text: str
+    editing: bool
+    error: bool
+
+
 class TextEdit:
     def __init__(
         self,
@@ -26,7 +34,7 @@ class TextEdit:
         edit_style: WidgetStyle | None = None,
         error_style: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
-        state: WidgetState | None = None,
+        state: TextEditState | None = None,
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
@@ -38,6 +46,7 @@ class TextEdit:
         self.validator = validator
         self.width = width
         self.height = height
+        self._focused = False
         
         # Styles
         self.style = combine_styles(style, WidgetStyle(
@@ -60,10 +69,14 @@ class TextEdit:
         ))
         
         # State
-        self.state = state if state is not None else WidgetState(focusable=True, disabled=False)
-        self._editing = False
-        self._error = False
-        self._focused = False
+        self.state = state if state is not None else TextEditState(
+            text=text,
+            editing=False,
+            error=False,
+            focusable=True,
+            disabled=False
+        )
+        
         self._original_text = text
         
         self.with_left_bracket = with_left_bracket
@@ -75,7 +88,7 @@ class TextEdit:
         self.buffer = Buffer(
             document=Document(text, 0),
             multiline=multiline,
-            read_only=Condition(lambda: not self._editing),
+            read_only=Condition(lambda: not self.state.editing),
             on_text_changed=self._on_text_changed,
         )
 
@@ -103,7 +116,7 @@ class TextEdit:
         # Main layout
         self.layout = ConditionalContainer(
             content=self._create_editor_layout(),
-            filter=Condition(lambda: self._editing),
+            filter=Condition(lambda: self.state.editing),
             alternative_content=self.button,
         )
 
@@ -166,7 +179,7 @@ class TextEdit:
 
     def _start_editing(self) -> None:
         self._original_text = self.buffer.text
-        self._editing = True
+        self.state.editing = True
         get_app().layout.focus(self.buffer_control)
 
     @property
@@ -178,14 +191,14 @@ class TextEdit:
         self.buffer.set_document(Document(value, 0), bypass_readonly=True)
 
     def _on_text_changed(self, buffer: Buffer) -> None:
-        self._error = False
+        self.state.error = False
 
     def is_focusable(self) -> bool:
         return self.state.focusable and not self.state.disabled
 
     def focus(self) -> None:
         self._focused = True
-        if self._editing:
+        if self.state.editing:
             get_app().layout.focus(self.buffer_control)
         else:
             self.button.focus()
@@ -198,9 +211,9 @@ class TextEdit:
         return self.layout
 
     def _get_style(self) -> str:
-        if self._error:
+        if self.state.error:
             return self.error_style.focused if self._focused else self.error_style.base
-        if self._editing:
+        if self.state.editing:
             return self.edit_style.focused if self._focused else self.edit_style.base
         return self.style.focused if self._focused else self.style.base
 
@@ -212,27 +225,27 @@ class TextEdit:
     def _get_edit_key_bindings(self) -> KeyBindings:
         kb = KeyBindings()
 
-        @kb.add("enter", filter=Condition(lambda: self._editing))
+        @kb.add("enter", filter=Condition(lambda: self.state.editing))
         def _(event: KeyPressEvent):
             if self.validator:
                 try:
                     self.validator.validate(self.buffer.document)
                 except Exception:
-                    self._error = True
+                    self.state.error = True
                     return
             
-            self._editing = False
-            self._error = False
+            self.state.editing = False
+            self.state.error = False
             get_app().layout.focus(self.button)
 
-        @kb.add("escape", filter=Condition(lambda: self._editing))
+        @kb.add("escape", filter=Condition(lambda: self.state.editing))
         def _(event: KeyPressEvent):
             self.buffer.text = self._original_text
-            self._editing = False
-            self._error = False
+            self.state.editing = False
+            self.state.error = False
             get_app().layout.focus(self.button)
 
-        @kb.add('escape', 'enter', filter=Condition(lambda: self._editing and self.multiline))
+        @kb.add('escape', 'enter', filter=Condition(lambda: self.state.editing and self.multiline))
         def _(event: KeyPressEvent):
             event.current_buffer.insert_text("\n")
 

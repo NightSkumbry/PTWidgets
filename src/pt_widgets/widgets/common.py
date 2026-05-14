@@ -25,9 +25,8 @@ def combine_styles(WidgetStyle1: WidgetStyle | None, WidgetStyle2: WidgetStyle |
 
 @dataclass
 class WidgetState:
-    focusable: bool = True
-    disabled: bool = False
-    checked: bool = False
+    focusable: bool
+    disabled: bool
 
 
 BoolOrCallable = Union[
