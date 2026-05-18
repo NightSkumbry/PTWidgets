@@ -41,4 +41,22 @@ def get_shared_style() -> Style:
         "pt_widget.brackets": "fg:ansicyan",
         "pt_widget.brackets.focused": "fg:ansiwhite bg:ansiblue",
         "pt_widget.brackets.disabled": "fg:ansicyan",
+
+        # Слайдеры
+        "pt_widget.slider": "fg:ansigray",
+        "pt_widget.slider.focused": "bg:ansiblue",
+        "pt_widget.slider.bar": "fg:ansiyellow",
+        "pt_widget.slider.bar.focused": "fg:ansiyellow bg:ansiblue bold",
+        "pt_widget.slider.fill": "fg:ansiyellow",
+        "pt_widget.slider.fill.focused": "fg:ansibrightyellow bg:ansiblue",
+        "pt_widget.slider.track": "fg:ansigray",
+        "pt_widget.slider.track.focused": "fg:ansigray bg:ansiblue",
+        "pt_widget.slider.edge": "fg:ansiblue",
+        "pt_widget.slider.edge.focused": "fg:ansicyan bg:ansiblue",
+
+        # Скроллбары
+        "pt_widget.scrollbar": "fg:ansigray",
+        "pt_widget.scrollbar.bar": "fg:ansiwhite bg:ansigray",
+        "pt_widget.scrollbar.track": "fg:ansigray",
+        "pt_widget.scrollbar.edge": "fg:ansiwhite",
     })
