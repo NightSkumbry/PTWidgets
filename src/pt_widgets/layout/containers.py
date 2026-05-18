@@ -184,6 +184,8 @@ class GridSplit(Container):
             while len(row) < m:
                 row.append(Window())
         
+        self.flat_children = [c for row in self.children for c in row]
+        
         self.window_too_small = window_too_small or _window_too_small()
         self.padding_width = padding_width
         self.padding_height = padding_height
@@ -216,10 +218,7 @@ class GridSplit(Container):
         return self.key_bindings
 
     def get_children(self) -> list[Container]:
-        res = []
-        for row in self.children:
-            res.extend(row)
-        return res
+        return self.flat_children
     
     def get_children_grid(self) -> list[list[Container]]:
         return self.children
