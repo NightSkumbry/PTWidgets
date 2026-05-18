@@ -21,6 +21,12 @@ from pt_widgets.layout.containers import GridSplit, ConditionalContainer
 
 
 @runtime_checkable
+class Navigation(Protocol):
+    def get_focused_container(self) -> AnyContainer:
+        ...
+
+
+@runtime_checkable
 class Focusable(Protocol):
     def is_focusable(self) -> bool:
         ...
@@ -190,6 +196,14 @@ class VerticalLayout:
     # MagicContainer
     def __pt_container__(self):
         return self.container
+    
+    # Navigation
+    def get_focused_container(self) -> AnyContainer:
+        return self.widgets[self._last_focus]
+    
+    @property
+    def focused_index(self) -> int:
+        return self._last_focus
     
     @property
     def _focusable_children_indices(self) -> list[int]:
@@ -372,6 +386,14 @@ class HorizontalLayout:
     # MagicContainer
     def __pt_container__(self):
         return self.container
+    
+    # Navigation
+    def get_focused_container(self) -> AnyContainer:
+        return self.widgets[self._last_focus]
+    
+    @property
+    def focused_index(self) -> int:
+        return self._last_focus
     
     @property
     def _focusable_children_indices(self) -> list[int]:
@@ -563,6 +585,17 @@ class GridLayout:
     # MagicContainer
     def __pt_container__(self):
         return self.container
+    
+    # Navigation
+    def get_focused_container(self) -> AnyContainer:
+        return self.widgets[self._last_focus[1]][self._last_focus[0]]
+    
+    @property
+    def focused_index(self) -> tuple[int, int]:
+        """
+        (x, y) pair
+        """
+        return self._last_focus
         
     @property
     def _focusable_children_indices(self) -> list[tuple[int, int]]:
