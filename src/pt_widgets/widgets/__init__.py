@@ -18,7 +18,11 @@ from .label import Label
 from .switch import (
     Switch,
     SwitchType,
+    Checkbox,
+    RadioButton,
 )
+
+from .text_edit import TextEdit
 
 __all__ = [
     "BaseBracketContentGenerator",
@@ -34,5 +38,8 @@ __all__ = [
     "Label",
     "Switch",
     "SwitchType",
+    "Checkbox",
+    "RadioButton",
+    "TextEdit",
 ]
 

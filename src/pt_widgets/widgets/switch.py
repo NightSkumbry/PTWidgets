@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from re import A
 from typing import Callable, Union
@@ -15,12 +16,19 @@ from pt_widgets.widgets.common import BoolOrCallable, WidgetState, WidgetStyle, 
 
 class SwitchType(Enum):
     CHECK = (' ', '✓')
-    CIRCLE = ('○', '●')
+    CIRCLE = ('○', '◉')
+    FULL_CIRCLE = ('○', '●')
+    BOX = ('□', '▣')
+    FULL_BOX = ('□', '■')
     SLIDING_CIRCLE = ('(○-)', '(-●)')
     TICK_IN_BOX = ('☐', '☑')
     CROSS_IN_BOX = ('☐', '☒')
-    FULL_BLOCK = ('[□]', '[■]')
     HALF_BLOCK = ('[▌]', '[▐]')
+
+
+@dataclass
+class SwitchState(WidgetState):
+    checked: bool
 
 
 class Switch:
@@ -38,10 +46,11 @@ class Switch:
         switch_style: WidgetStyle | None = None,
         switch_style_on: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
-        state: WidgetState | None = None,
+        state: SwitchState | None = None,
         with_left_bracket: BoolOrCallable = True,
         with_right_bracket: BoolOrCallable = True,
         bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
     ) -> None:
         self.text = text
         self.text_on = text_on if text_on is not None else text
@@ -82,7 +91,7 @@ class Switch:
         ))
 
         self._focused = False
-        self.state = state if state is not None else WidgetState(focusable=True, disabled=False, checked=False)
+        self.state = state if state is not None else SwitchState(focusable=True, disabled=False, checked=False)
         self.with_left_bracket = with_left_bracket
         self.with_right_bracket = with_right_bracket
 
@@ -92,7 +101,7 @@ class Switch:
                 self._get_formatted_text,
                 focusable=True,
                 show_cursor=False,
-                key_bindings=self._get_key_bindings(),
+                key_bindings=self._get_key_bindings() if custom_key_bindings is None else custom_key_bindings,
             ),
             dont_extend_height=True,
             dont_extend_width=True,
@@ -207,3 +216,159 @@ class Switch:
 
     def _with_right_bracket(self) -> bool:
         return to_bool(self.with_right_bracket)
+
+
+class Checkbox(Switch):
+    """
+    Shortcut for different default look
+    """
+    
+    def __init__(
+        self,
+        text: AnyFormattedText = "",
+        text_on: AnyFormattedText | None = None,
+        handler: Callable[[bool], None] | None = None,
+        switch_type: Union[SwitchType, tuple[str, str]] = SwitchType.BOX,
+        switch_before_text: bool = True,
+        width: AnyDimension = None,
+        height: AnyDimension = None,
+        style: WidgetStyle | None = None,
+        style_on: WidgetStyle | None = None,
+        switch_style: WidgetStyle | None = None,
+        switch_style_on: WidgetStyle | None = None,
+        brackets_style: WidgetStyle | None = None,
+        state: SwitchState | None = None,
+        with_left_bracket: BoolOrCallable = False,
+        with_right_bracket: BoolOrCallable = False,
+        bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
+    ) -> None:
+        super().__init__(
+            text=text,
+            text_on=text_on,
+            handler=handler,
+            switch_type=switch_type,
+            switch_before_text=switch_before_text,
+            width=width,
+            height=height,
+            style=style,
+            style_on=style_on,
+            switch_style=switch_style,
+            switch_style_on=switch_style_on,
+            brackets_style=brackets_style,
+            state=state,
+            with_left_bracket=with_left_bracket,
+            with_right_bracket=with_right_bracket,
+            bracket_type=bracket_type,
+            custom_key_bindings=custom_key_bindings,
+        )
+
+
+class RadioButton(Switch):
+    """
+    Shortcut for different default look (and can't be disabled by default)
+    """
+    
+    def __init__(
+        self,
+        text: AnyFormattedText = "",
+        text_on: AnyFormattedText | None = None,
+        handler: Callable[[bool], None] | None = None,
+        switch_type: Union[SwitchType, tuple[str, str]] = SwitchType.CIRCLE,
+        switch_before_text: bool = True,
+        width: AnyDimension = None,
+        height: AnyDimension = None,
+        style: WidgetStyle | None = None,
+        style_on: WidgetStyle | None = None,
+        switch_style: WidgetStyle | None = None,
+        switch_style_on: WidgetStyle | None = None,
+        brackets_style: WidgetStyle | None = None,
+        state: SwitchState | None = None,
+        with_left_bracket: BoolOrCallable = False,
+        with_right_bracket: BoolOrCallable = False,
+        bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
+        can_be_disabled: bool = False,
+    ) -> None:
+        self.can_be_disabled = can_be_disabled
+        super().__init__(
+            text=text,
+            text_on=text_on,
+            handler=handler,
+            switch_type=switch_type,
+            switch_before_text=switch_before_text,
+            width=width,
+            height=height,
+            style=style,
+            style_on=style_on,
+            switch_style=switch_style,
+            switch_style_on=switch_style_on,
+            brackets_style=brackets_style,
+            state=state,
+            with_left_bracket=with_left_bracket,
+            with_right_bracket=with_right_bracket,
+            bracket_type=bracket_type,
+            custom_key_bindings=custom_key_bindings,
+        )
+
+    def _get_key_bindings(self) -> KeyBindings:
+        kb = KeyBindings()
+        @kb.add("enter", filter=Condition(lambda: not self.state.disabled and (not self.state.checked or self.can_be_disabled)))
+        def _(event):
+            self.state.checked = not self.state.checked
+            if self.handler:
+                self.handler(self.state.checked)
+        return kb
+
+
+class RadioGroup:
+    def __init__(
+        self,
+        items: dict[str, RadioButton],
+        handler: Callable[[str], None] | None = None
+    ) -> None:
+        self.items = items
+        self.handler = handler
+
+        for name, rb in self.items.items():
+            original_handler = rb.handler
+
+            def make_handler(current_name=name, oh=original_handler):
+                def group_handler(checked: bool):
+                    if oh:
+                        oh(checked)
+                    
+                    if checked:
+                        for other_name, other_rb in self.items.items():
+                            if other_name != current_name:
+                                other_rb.state.checked = False
+                        
+                        if self.handler:
+                            self.handler(current_name)
+                return group_handler
+
+            rb.handler = make_handler()
+
+
+class CheckboxGroup:
+    def __init__(
+        self,
+        items: dict[str, Checkbox],
+        handler: Callable[[str, bool], None] | None = None
+    ) -> None:
+        self.items = items
+        self.handler = handler
+
+        for name, cb in self.items.items():
+            original_handler = cb.handler
+
+            def make_handler(current_name=name, oh=original_handler):
+                def group_handler(checked: bool):
+                    if oh:
+                        oh(checked)
+                        
+                    if self.handler:
+                        self.handler(current_name, checked)
+                return group_handler
+
+            cb.handler = make_handler()

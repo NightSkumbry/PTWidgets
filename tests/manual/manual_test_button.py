@@ -1,44 +1,14 @@
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.styles import Style
 from pt_widgets.widgets.button import Button
 from pt_widgets.widgets.label import Label
 from pt_widgets.widgets.switch import Switch, SwitchType
 from pt_widgets.layout.navigation import VerticalLayout, HorizontalLayout
 from pt_widgets.widgets.common import WidgetState, WidgetStyle
+from shared_styles import get_shared_style
 
 def run():
-    # Определяем стили для виджетов
-    style = Style.from_dict({
-        # Кнопки
-        "pt_widget.button": "fg:ansiblue bg:ansigray",
-        "pt_widget.button.focused": "fg:ansiyellow bg:ansiblue",
-        "pt_widget.button.disabled": "fg:ansigray bg:ansiblack",
-        # Метки
-        "pt_widget.label": "fg:ansiwhite",
-        "pt_widget.label.focused": "fg:ansiblack bg:ansiwhite",
-        "pt_widget.label.disabled": "fg:ansigray",
-        # Переключатели (Текст)
-        "pt_widget.switch.text": "fg:ansiwhite",
-        "pt_widget.switch.text.focused": "fg:ansiblack bg:ansiyellow",
-        "pt_widget.switch.text.disabled": "fg:ansigray",
-        "pt_widget.switch.text.on": "fg:ansigreen bold",
-        "pt_widget.switch.text.on.focused": "fg:ansiyellow bg:ansigreen",
-        "pt_widget.switch.text.on.disabled": "fg:ansidarkgreen nobold",
-        # Переключатели (Тумблер)
-        "pt_widget.switch.toggle": "fg:ansired",
-        "pt_widget.switch.toggle.focused": "fg:ansired bg:ansiyellow",
-        "pt_widget.switch.toggle.disabled": "fg:ansidarkred",
-        "pt_widget.switch.toggle.on": "fg:ansibrightgreen",
-        "pt_widget.switch.toggle.on.focused": "fg:ansibrightgreen bg:ansiyellow",
-        "pt_widget.switch.toggle.on.disabled": "fg:ansigreen",
-        # Скобки
-        "pt_widget.brackets": "fg:ansicyan",
-        "pt_widget.brackets.focused": "fg:ansiwhite bg:ansiblue",
-        "pt_widget.brackets.disabled": "fg:ansicyan",
-    })
-
     # Состояния для кнопок, чтобы они могли отключать друг друга
     state1 = WidgetState(focusable=True, disabled=False)
     state2 = WidgetState(focusable=True, disabled=False)
@@ -98,7 +68,7 @@ def run():
         Label("Switches:"),
         Switch("Dark Mode", state=state4),
         Switch("Notifications", switch_type=SwitchType.TICK_IN_BOX, switch_before_text=True),
-        Switch("Feature X", text_on="Feature X (ENABLED)", switch_type=SwitchType.FULL_BLOCK),
+        Switch("Feature X", text_on="Feature X (ENABLED)", switch_type=SwitchType.BOX),
         
         HorizontalLayout([
             Label("Volume:"),
@@ -117,7 +87,7 @@ def run():
     app = Application(
         layout=Layout(layout),
         key_bindings=kb,
-        style=style,
+        style=get_shared_style(),
         full_screen=True,
         mouse_support=True,
     )

@@ -25,6 +25,7 @@ class Button:
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
     ) -> None:
         self.text = text
         self.handler = handler
@@ -48,7 +49,7 @@ class Button:
         self.control = Window(
             content=FormattedTextControl(
                 self._get_formatted_text,
-                key_bindings=self._get_key_bindings(),
+                key_bindings=self._get_key_bindings() if custom_key_bindings is None else custom_key_bindings,
                 focusable=True,
                 show_cursor=False,
             ),

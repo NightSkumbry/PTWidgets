@@ -1,6 +1,7 @@
 from prompt_toolkit.application import get_app
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.formatted_text import AnyFormattedText
+from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import AnyDimension, Container, FormattedTextControl, VSplit, Window
 
 from pt_widgets.layout.containers import ConditionalContainer
@@ -20,6 +21,7 @@ class Label:
         with_left_bracket: BoolOrCallable = False,
         with_right_bracket: BoolOrCallable = False,
         bracket_type: BracketType = BracketType.SQUARE,
+        custom_key_bindings: KeyBindings | None = None,
     ) -> None:
         self.text = text
         self.width = width
@@ -44,6 +46,7 @@ class Label:
                 self._get_formatted_text,
                 focusable=Condition(lambda: self.state.focusable),
                 show_cursor=False,
+                key_bindings=custom_key_bindings,
             ),
             dont_extend_height=True,
             dont_extend_width=True,
