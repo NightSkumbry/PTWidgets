@@ -21,6 +21,8 @@ from .navigation import (
     GridLayout,
 )
 
+from .scrollable import Scrollable
+
 
 __all__ = [
     "WidgetContainer",
@@ -37,5 +39,6 @@ __all__ = [
     "VerticalLayout",
     "HorizontalLayout",
     "GridLayout",
+    "Scrollable",
 ]
 
