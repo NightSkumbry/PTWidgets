@@ -2,7 +2,7 @@ from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from pt_widgets.widgets.label import Label
-from pt_widgets.widgets.switch import Checkbox, CheckboxGroup, RadioButton, RadioGroup, SwitchType
+from pt_widgets.widgets.switch import Checkbox, CheckboxGroup, RadioButton, RadioGroup, SwitchType, SwitchState
 from pt_widgets.layout.navigation import VerticalLayout, HorizontalLayout
 from pt_widgets.widgets.common import WidgetState, WidgetStyle
 from shared_styles import get_shared_style
@@ -14,10 +14,10 @@ def run():
 
     # --- Checkbox Group ---
     cb_items = {
-        "Python": Checkbox("Python", state=WidgetState(checked=True)),
+        "Python": Checkbox("Python", state=SwitchState(focusable=True, disabled=False, checked=True)),
         "Rust": Checkbox("Rust"),
         "C++": Checkbox("C++"),
-        "Go": Checkbox("Go", state=WidgetState(checked=True))
+        "Go": Checkbox("Go", state=SwitchState(focusable=True, disabled=False, checked=True))
     }
     
     def cb_handler(name, checked):
@@ -29,7 +29,7 @@ def run():
     # --- Radio Group ---
     rb_items = {
         "Small": RadioButton("Small"),
-        "Medium": RadioButton("Medium", state=WidgetState(checked=True)),
+        "Medium": RadioButton("Medium", state=SwitchState(focusable=True, disabled=False, checked=True)),
         "Large": RadioButton("Large"),
         "Optional (Can be unselected)": RadioButton("Optional (Can be unselected)", can_be_disabled=True)
     }

@@ -5,7 +5,7 @@ from prompt_toolkit.filters import Condition
 
 from pt_widgets.widgets.button import Button
 from pt_widgets.widgets.label import Label
-from pt_widgets.widgets.switch import Switch
+from pt_widgets.widgets.switch import Switch, SwitchState
 from pt_widgets.layout.navigation import GridLayout, VerticalLayout
 from pt_widgets.layout.containers import ConditionalContainer
 from pt_widgets.widgets.common import WidgetState, WidgetStyle
@@ -13,8 +13,8 @@ from shared_styles import get_shared_style
 
 def run():
     # State for toggling
-    show_secret_state = WidgetState(checked=False)
-    switch_content_state = WidgetState(checked=False)
+    show_secret_state = SwitchState(focusable=True, disabled=False, checked=False)
+    switch_content_state = SwitchState(focusable=True, disabled=False, checked=False)
     
     # State for DynamicContainer
     dynamic_counter = [0]
