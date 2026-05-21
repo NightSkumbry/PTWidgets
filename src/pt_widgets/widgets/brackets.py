@@ -71,6 +71,11 @@ class CurlyBracketsContentGenerator(BaseBracketContentGenerator):
             case (h, y) if not h % 2 and y == mid - 1: char = CurlySymbols.BOTTOM.value[1 - self.is_right]
             case _: char = CurlySymbols.MIDDLE.value[self.is_right]
         return [(self.style, char)]
+
+
+class NoneBracketsContentGenerator(BaseBracketContentGenerator):
+    def get_line(self, y: int) -> StyleAndTextTuples:
+        return [(self.style, " ")]
         
 
 class BracketsControl(ExpandableControl):
@@ -86,4 +91,5 @@ class BracketType(Enum):
     PARENTHESIS = ParenthesisContentGenerator
     SQUARE = SquareBracketsContentGenerator
     CURLY = CurlyBracketsContentGenerator
+    NONE = NoneBracketsContentGenerator
     
