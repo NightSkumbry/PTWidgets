@@ -28,6 +28,7 @@ class TextEdit:
         text: str = "",
         multiline: bool = False,
         validator: Validator | None = None,
+        handler: Callable[[str], None] | None = None,
         width: AnyDimension = None,
         height: AnyDimension = None,
         style: WidgetStyle | None = None,
@@ -44,6 +45,7 @@ class TextEdit:
     ) -> None:
         self.multiline = multiline
         self.validator = validator
+        self.handler = handler
         self.width = width
         self.height = height
         self._focused = False
@@ -237,6 +239,9 @@ class TextEdit:
             self.state.editing = False
             self.state.error = False
             get_app().layout.focus(self.button)
+            
+            if self.handler:
+                self.handler(self.buffer.text)
 
         @kb.add("escape", filter=Condition(lambda: self.state.editing))
         def _(event: KeyPressEvent):
