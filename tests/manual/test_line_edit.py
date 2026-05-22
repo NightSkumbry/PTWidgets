@@ -22,12 +22,20 @@ class NotIntegerValidator(Validator):
             raise ValidationError(message="Cannot be an integer")
 
 def run():
+    status_label = Label("Status: Waiting for input...", style=WidgetStyle(base="fg:ansigreen"))
+
+    def handle_save(name: str):
+        def handler(text: str):
+            status_label.text = f"Status: Saved {name}: {text.replace('\n', ' ')}"
+        return handler
+
     line_edit1 = TextEdit(
         text="Edit me",
         with_left_bracket=True,
         with_right_bracket=True,
         bracket_type=BracketType.SQUARE,
         edit_bracket_type=BracketType.PARENTHESIS,
+        handler=handle_save("Edit1")
     )
 
     line_edit2 = TextEdit(
@@ -35,6 +43,7 @@ def run():
         validator=NotIntegerValidator(),
         with_left_bracket=True,
         with_right_bracket=True,
+        handler=handle_save("Edit2")
     )
 
     line_edit3 = TextEdit(
@@ -42,6 +51,7 @@ def run():
         multiline=True,
         with_left_bracket=True,
         with_right_bracket=True,
+        handler=handle_save("Edit3")
     )
 
     layout = VerticalLayout([
@@ -49,6 +59,8 @@ def run():
         
         Label("=== PTWidgets LineEdit Test ===", style=WidgetStyle(base="fg:ansiyellow bold")),
         
+        status_label,
+
         Label("\nSimple LineEdit (Changes brackets on edit):"),
         line_edit1,
 
