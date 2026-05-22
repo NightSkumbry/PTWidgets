@@ -17,6 +17,10 @@ from .layout import (
     Scrollable,
 )
 
+from .managers import (
+    WindowManager,
+)
+
 from .widgets import (
     Button,
     Label,
@@ -75,6 +79,7 @@ __all__ = [
     "WidgetStyle",
     "WidgetState",
     "SwitchState",
+    "WindowManager",
 ]
 
 

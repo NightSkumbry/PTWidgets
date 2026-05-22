@@ -19,7 +19,7 @@ class WindowManager[StateT: Enum]:
     def current_state(self) -> StateT:
         return self._state
     
-    def transition_to(self, new_state: StateT) -> None:
+    def switch_to(self, new_state: StateT) -> None:
         allowed_states = self._transitions.get(self._state, [])
         
         if new_state not in allowed_states:
