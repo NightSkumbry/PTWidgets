@@ -40,13 +40,14 @@ class ConditionalContainer(PTConditionalContainer):
         super().__init__(content, filter, alternative_content=alternative_content)
         self.widget = content
         self.alternative_widget = alternative_content
-    
+
     def get_children(self) -> list[Container]:
         if self.filter():
-            return to_container(self.widget).get_children()
+            return [to_container(self.widget)]
         elif self.alternative_widget is not None:
-            return to_container(self.alternative_widget).get_children()
+            return [to_container(self.alternative_widget)]
         return []
+
 
         
         
@@ -56,7 +57,7 @@ class WrapperContainer(Container):
         self.container = to_container(content)
     
     def get_children(self) -> list[Container]:
-        return self.container.get_children()
+        return [self.container]
     
     def reset(self) -> None:
         self.container.reset()
@@ -483,19 +484,19 @@ class GridSplit(Container):
         z_index: int | None,
     ) -> None:
         style = parent_style + " " + to_str(self.style)
-        z_index = z_index if self.z_index is None else self.z_index
+        actual_z_index = z_index if self.z_index is None else self.z_index
         
         sizesX = self._divide_widths(write_position.width)
         if sizesX is None:
             self.window_too_small.write_to_screen(
-                screen, mouse_handlers, write_position, style, erase_bg, z_index
+                screen, mouse_handlers, write_position, style, erase_bg, actual_z_index
             )
             return
         
         sizesY = self._divide_heights(sizesX, write_position.height)
         if sizesY is None:
             self.window_too_small.write_to_screen(
-                screen, mouse_handlers, write_position, style, erase_bg, z_index
+                screen, mouse_handlers, write_position, style, erase_bg, actual_z_index
             )
             return
         
@@ -511,7 +512,7 @@ class GridSplit(Container):
                     WritePosition(xpos, ypos, width, height),
                     style,
                     erase_bg,
-                    z_index,
+                    actual_z_index,
                 )
                 xpos += width
                 
@@ -528,7 +529,7 @@ class GridSplit(Container):
                     WritePosition(xpos, ypos, remaining_width, height),
                     style,
                     erase_bg,
-                    z_index,
+                    actual_z_index,
                 )
             
             ypos += height
@@ -546,7 +547,7 @@ class GridSplit(Container):
                 WritePosition(write_position.xpos, ypos, sum(sizesX), remaining_height),
                 style,
                 erase_bg,
-                z_index,
+                actual_z_index,
             )
         
 
