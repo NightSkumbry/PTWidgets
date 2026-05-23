@@ -40,6 +40,14 @@ class ConditionalContainer(PTConditionalContainer):
         super().__init__(content, filter, alternative_content=alternative_content)
         self.widget = content
         self.alternative_widget = alternative_content
+    
+    def get_children(self) -> list[Container]:
+        if self.filter():
+            return to_container(self.widget).get_children()
+        elif self.alternative_widget is not None:
+            return to_container(self.alternative_widget).get_children()
+        return []
+
         
         
 class WrapperContainer(Container):

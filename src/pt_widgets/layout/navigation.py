@@ -2,6 +2,7 @@ from functools import singledispatch
 from typing import Callable, NamedTuple, Sequence, override, Protocol, runtime_checkable
 
 from prompt_toolkit.application import get_app
+from prompt_toolkit.cache import SimpleCache
 from prompt_toolkit.filters import Always, Condition, Filter
 from prompt_toolkit.key_binding import KeyBindings, KeyBindingsBase, KeyPressEvent, merge_key_bindings
 from prompt_toolkit.layout import (
@@ -212,11 +213,14 @@ class VerticalLayout:
         self._last_focus: int = base_focus
         self.shift_point = shift_point
         self.active = False
+        self._focusable_indices_cache = SimpleCache(maxsize=1)
         
     
     # Focusable
     def is_focusable(self) -> bool:
-        return self.focusable and any(is_focusable(c) for c in self.widgets)
+        def get():
+            return self.focusable and any(is_focusable(c) for c in self.widgets)
+        return self._focusable_indices_cache.get(("is_focusable", get_app().render_counter), get)
     
     def focus(self) -> None:
         self.active = True
@@ -240,7 +244,9 @@ class VerticalLayout:
     
     @property
     def _focusable_children_indices(self) -> list[int]:
-        return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        def get():
+            return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        return self._focusable_indices_cache.get(get_app().render_counter, get)
     
     def _focus_closest(self) -> None:
         focusable_indices = self._focusable_children_indices
@@ -402,11 +408,14 @@ class HorizontalLayout:
         self._last_focus: int = base_focus
         self.shift_point = shift_point
         self.active = False
+        self._focusable_indices_cache = SimpleCache(maxsize=1)
         
     
     # Focusable
     def is_focusable(self) -> bool:
-        return self.focusable and any(is_focusable(c) for c in self.widgets)
+        def get():
+            return self.focusable and any(is_focusable(c) for c in self.widgets)
+        return self._focusable_indices_cache.get(("is_focusable", get_app().render_counter), get)
     
     def focus(self) -> None:
         self.active = True
@@ -430,7 +439,9 @@ class HorizontalLayout:
     
     @property
     def _focusable_children_indices(self) -> list[int]:
-        return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        def get():
+            return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        return self._focusable_indices_cache.get(get_app().render_counter, get)
     
     def _focus_closest(self) -> None:
         focusable_indices = self._focusable_children_indices
