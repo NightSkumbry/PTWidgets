@@ -289,10 +289,82 @@ class GridSplit(Container):
         self.vertical_align = vertical_align
         self.horizontal_align = horizontal_align
 
-        self._children_cache: SimpleCache[tuple[tuple[Container, ...], ...], list[list[Container]]] = (
-            SimpleCache(maxsize=1)
-        )
+        self._width_cache = SimpleCache(maxsize=10)
+        self._height_cache = SimpleCache(maxsize=10)
+        self._divide_widths_cache = SimpleCache(maxsize=10)
+        self._divide_heights_cache = SimpleCache(maxsize=10)
+        
+        self._all_children_cache = self._build_all_children()
+        self._all_children_columns = list(zip(*self._all_children_cache)) if self._all_children_cache else []
         self._remaining_space_window = Window()  # Dummy window.
+
+    def _build_all_children(self) -> list[list[Container]]:
+        result: list[list[Container]] = []
+        
+        # Padding Top.
+        if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.BOTTOM):
+            result.append([
+                Window(width=Dimension(preferred=0))
+                for _ in range(self.sizeX*2-1 +
+                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
+                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
+            ])
+        
+        for row in self.children:
+            buff: list[Container] = []
+            
+            # Padding Left.
+            if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT):
+                buff.append(Window(width=Dimension(preferred=0)))
+            
+            # The children with padding.
+            for child in row:
+                buff.append(child)
+                buff.append(
+                    Window(
+                        width=self.padding_width,
+                        height=self.padding_height,
+                        char=self.padding_char,
+                        style=self.padding_style,
+                    )
+                )
+            if buff:
+                buff.pop()
+
+            # Padding right.
+            if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT):
+                buff.append(Window(width=Dimension(preferred=0)))
+            
+            result.append(buff)
+            
+            result.append(
+                [Window(
+                    height=self.padding_height,
+                    width=self.padding_width,
+                    char=self.padding_char,
+                    style=self.padding_style,
+                ) for _ in range(self.sizeX*2-1 +
+                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
+                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))]
+            )
+        
+        if result:
+            result.pop()
+        
+        # Padding bottom.
+        if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.TOP):
+            result.append([
+                Window(width=Dimension(preferred=0))
+                for _ in range(self.sizeX*2-1 +
+                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
+                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
+            ])
+        
+        return result
+
+    @property
+    def _all_children(self) -> list[list[Container]]:
+        return self._all_children_cache
 
     def is_modal(self) -> bool:
         return self.modal
@@ -306,164 +378,132 @@ class GridSplit(Container):
     def get_children_grid(self) -> list[list[Container]]:
         return self.children
 
-    def preferred_width(self, max_available_width: int) -> Dimension:
-        if self.width is not None:
-            return to_dimension(self.width)
-
-        if not (self.sizeY and self.sizeX):
-            return sum_layout_dimensions([])
-        
-        dimensions = []
-        children = self._all_children
-        
-        for column in range(len(children[0])):
-            dimensions.append(max_layout_dimensions(
-                [r[column].preferred_width(max_available_width) for r in children]
-            ))
-
-        return sum_layout_dimensions(dimensions)
-        
-    def preferred_height(self, width: int, max_available_height: int) -> Dimension:
-        if self.height is not None:
-            return to_dimension(self.height)
-        
-        if not (self.sizeY and self.sizeX):
-            return sum_layout_dimensions([])
-        
-        dimensions = [
-            max_layout_dimensions([c.preferred_height(width, max_available_height) for c in r])
-            for r in self._all_children
-        ]
-        
-        return sum_layout_dimensions(dimensions)
-
     def reset(self) -> None:
         for r in self.children:
             for c in r:
                 c.reset()
 
-    @property
-    def _all_children(self) -> list[list[Container]]:
-        """
-        List of child objects, including padding.
-        """
+    def preferred_width(self, max_available_width: int) -> Dimension:
+        if self.width is not None:
+            return to_dimension(self.width)
 
-        def get() -> list[list[Container]]:
-            result: list[list[Container]] = []
+        def get_dim():
+            if not (self.sizeY and self.sizeX):
+                return sum_layout_dimensions([])
             
-            # Padding Top.
-            if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.BOTTOM):
-                result.append([
-                    Window(width=Dimension(preferred=0))
-                    for _ in range(self.sizeX*2-1 +
-                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
-                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
-                ])
-            
-            for row in self.children:
-                buff: list[Container] = []
-                
-                # Padding Left.
-                if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT):
-                    buff.append(Window(width=Dimension(preferred=0)))
-                
-                # The children with padding.
-                for child in row:
-                    buff.append(child)
-                    buff.append(
-                        Window(
-                            width=self.padding_width,
-                            height=self.padding_height,
-                            char=self.padding_char,
-                            style=self.padding_style,
-                        )
-                    )
-                if buff:
-                    buff.pop()
+            dimensions = []
+            for col_children in self._all_children_columns:
+                dimensions.append(max_layout_dimensions(
+                    [c.preferred_width(max_available_width) for c in col_children]
+                ))
 
-                # Padding right.
-                if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT):
-                    buff.append(Window(width=Dimension(preferred=0)))
-                
-                result.append(buff)
-                
-                result.append(
-                    [Window(
-                        height=self.padding_height,
-                        width=self.padding_width,
-                        char=self.padding_char,
-                        style=self.padding_style,
-                    ) for _ in range(self.sizeX*2-1 +
-                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
-                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))]
-                )
+            return sum_layout_dimensions(dimensions)
+        
+        return self._width_cache.get(max_available_width, get_dim)
+        
+    def preferred_height(self, width: int, max_available_height: int) -> Dimension:
+        if self.height is not None:
+            return to_dimension(self.height)
+        
+        def get_dim():
+            if not (self.sizeY and self.sizeX):
+                return sum_layout_dimensions([])
             
-            if result:
-                result.pop()
+            dimensions = [
+                max_layout_dimensions([c.preferred_height(width, max_available_height) for c in r])
+                for r in self._all_children
+            ]
             
-            # Padding bottom.
-            if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.TOP):
-                result.append([
-                    Window(width=Dimension(preferred=0))
-                    for _ in range(self.sizeX*2-1 +
-                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
-                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
-                ])
-            
-            return result
-
-        return self._children_cache.get(tuple(tuple(r) for r in self.children), get)
+            return sum_layout_dimensions(dimensions)
+        
+        return self._height_cache.get((width, max_available_height), get_dim)
 
     def _divide_widths(self, width: int) -> list[int] | None:
-        children = self._all_children
+        def get():
+            children = self._all_children
+            if not children:
+                return []
+            
+            # Calculate widths using pre-calculated columns.
+            dimensions = []
+            for col_children in self._all_children_columns:
+                dimensions.append(max_layout_dimensions(
+                    [c.preferred_width(width) for c in col_children]
+                ))
+            preferred_dimensions = [d.preferred for d in dimensions]
+            
+            # Sum dimensions
+            sum_dimensions = sum_layout_dimensions(dimensions)
 
-        if not children:
-            return []
-        
-        # Calculate widths.
-        dimensions = []
-        for column in range(len(children[0])):
-            dimensions.append(max_layout_dimensions(
-                [r[column].preferred_width(width) for r in self._all_children]
-            ))
-        preferred_dimensions = [d.preferred for d in dimensions]
-        
-        # Sum dimensions
-        sum_dimensions = sum_layout_dimensions(dimensions)
+            # If there is not enough space for both.
+            if sum_dimensions.min > width:
+                return None
+            
+            sizes = [d.min for d in dimensions]
+            child_generator = take_using_weights(
+                items=list(range(len(dimensions))), weights=[d.weight for d in dimensions]
+            )
 
-        # If there is not enough space for both.
-        # Don't do anything.
-        if sum_dimensions.min > width:
-            return None
-        
-        # Find optimal sizes. (Start with minimal size, increase until we cover
-        # the whole width.)
-        sizes = [d.min for d in dimensions]
-
-        child_generator = take_using_weights(
-            items=list(range(len(dimensions))), weights=[d.weight for d in dimensions]
-        )
-
-        i = next(child_generator)
-
-        # Increase until we meet at least the 'preferred' size.
-        preferred_stop = min(width, sum_dimensions.preferred)
-
-        while sum(sizes) < preferred_stop:
-            if sizes[i] < preferred_dimensions[i]:
-                sizes[i] += 1
             i = next(child_generator)
+            preferred_stop = min(width, sum_dimensions.preferred)
+            while sum(sizes) < preferred_stop:
+                if sizes[i] < preferred_dimensions[i]:
+                    sizes[i] += 1
+                i = next(child_generator)
 
-        # Increase until we use all the available space.
-        max_dimensions = [d.max for d in dimensions]
-        max_stop = min(width, sum_dimensions.max)
+            max_dimensions = [d.max for d in dimensions]
+            max_stop = min(width, sum_dimensions.max)
+            while sum(sizes) < max_stop:
+                if sizes[i] < max_dimensions[i]:
+                    sizes[i] += 1
+                i = next(child_generator)
 
-        while sum(sizes) < max_stop:
-            if sizes[i] < max_dimensions[i]:
-                sizes[i] += 1
+            return sizes
+
+        return self._divide_widths_cache.get(width, get)
+
+    def _divide_heights(self, widths: list[int], height: int) -> list[int] | None:
+        def get():
+            if not self.children:
+                return []
+            
+            # Calculate heights.
+            dimensions = [
+                max_layout_dimensions([c.preferred_height(width, height) for c, width in zip(r, widths)])
+                for r in self._all_children
+            ]
+            
+            # Sum dimensions
+            sum_dimensions = sum_layout_dimensions(dimensions)
+            if sum_dimensions.min > height:
+                return None
+
+            sizes = [d.min for d in dimensions]
+            child_generator = take_using_weights(
+                items=list(range(len(dimensions))), weights=[d.weight for d in dimensions]
+            )
+
             i = next(child_generator)
+            preferred_stop = min(height, sum_dimensions.preferred)
+            preferred_dimensions = [d.preferred for d in dimensions]
 
-        return sizes
+            while sum(sizes) < preferred_stop:
+                if sizes[i] < preferred_dimensions[i]:
+                    sizes[i] += 1
+                i = next(child_generator)
+
+            if not get_app().is_done:
+                max_stop = min(height, sum_dimensions.max)
+                max_dimensions = [d.max for d in dimensions]
+                while sum(sizes) < max_stop:
+                    if sizes[i] < max_dimensions[i]:
+                        sizes[i] += 1
+                    i = next(child_generator)
+
+            return sizes
+
+        # Cache key includes widths tuple to ensure correctness if width distribution changes
+        return self._divide_heights_cache.get((tuple(widths), height), get)
 
     def write_to_screen(
         self,
@@ -492,26 +532,22 @@ class GridSplit(Container):
             return
         
         ypos = write_position.ypos
-        
         for row, height in zip(self._all_children, sizesY):
+            if height <= 0:
+                continue
             xpos = write_position.xpos
-            
             for child, width in zip(row, sizesX):
-                child.write_to_screen(
-                    screen,
-                    mouse_handlers,
-                    WritePosition(xpos, ypos, width, height),
-                    style,
-                    erase_bg,
-                    z_index,
-                )
+                if width > 0:
+                    child.write_to_screen(
+                        screen,
+                        mouse_handlers,
+                        WritePosition(xpos, ypos, width, height),
+                        style,
+                        erase_bg,
+                        z_index,
+                    )
                 xpos += width
                 
-            # Fill in the remaining space. This happens when a child control
-            # refuses to take more space and we don't have any padding. Adding a
-            # dummy child control for this (in `self._all_children`) is not
-            # desired, because in some situations, it would take more space, even
-            # when it's not required. This is required to apply the styling.
             remaining_width = write_position.xpos + write_position.width - xpos
             if remaining_width > 0:
                 self._remaining_space_window.write_to_screen(
@@ -522,14 +558,8 @@ class GridSplit(Container):
                     erase_bg,
                     z_index,
                 )
-            
             ypos += height
         
-        # Fill in the remaining space. This happens when a child control
-        # refuses to take more space and we don't have any padding. Adding a
-        # dummy child control for this (in `self._all_children`) is not
-        # desired, because in some situations, it would take more space, even
-        # when it's not required. This is required to apply the styling.
         remaining_height = write_position.ypos + write_position.height - ypos
         if remaining_height > 0:
             self._remaining_space_window.write_to_screen(
@@ -540,56 +570,6 @@ class GridSplit(Container):
                 erase_bg,
                 z_index,
             )
-        
-
-    def _divide_heights(self, widths: list[int], height: int) -> list[int] | None:
-        if not self.children:
-            return []
-        
-        # Calculate heights.
-        dimensions = [
-            max_layout_dimensions([c.preferred_height(width, height) for c, width in zip(r, widths)])
-            for r in self._all_children
-        ]
-        
-        # Sum dimensions
-        sum_dimensions = sum_layout_dimensions(dimensions)
-
-        # If there is not enough space for both.
-        # Don't do anything.
-        if sum_dimensions.min > height:
-            return None
-
-        # Find optimal sizes. (Start with minimal size, increase until we cover
-        # the whole height.)
-        sizes = [d.min for d in dimensions]
-
-        child_generator = take_using_weights(
-            items=list(range(len(dimensions))), weights=[d.weight for d in dimensions]
-        )
-
-        i = next(child_generator)
-
-        # Increase until we meet at least the 'preferred' size.
-        preferred_stop = min(height, sum_dimensions.preferred)
-        preferred_dimensions = [d.preferred for d in dimensions]
-
-        while sum(sizes) < preferred_stop:
-            if sizes[i] < preferred_dimensions[i]:
-                sizes[i] += 1
-            i = next(child_generator)
-
-        # Increase until we use all the available space. (or until "max")
-        if not get_app().is_done:
-            max_stop = min(height, sum_dimensions.max)
-            max_dimensions = [d.max for d in dimensions]
-
-            while sum(sizes) < max_stop:
-                if sizes[i] < max_dimensions[i]:
-                    sizes[i] += 1
-                i = next(child_generator)
-
-        return sizes
     
     def get_horizontal_write_positions(self, write_position: WritePosition) -> list[WritePosition] | None:
         sizesX = self._divide_widths(write_position.width)
@@ -649,9 +629,3 @@ class GridSplit(Container):
             ypos += height
         
         return wp
-
-
-    
-    
-    
-    
