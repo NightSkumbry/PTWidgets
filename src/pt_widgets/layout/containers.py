@@ -40,6 +40,14 @@ class ConditionalContainer(PTConditionalContainer):
         super().__init__(content, filter, alternative_content=alternative_content)
         self.widget = content
         self.alternative_widget = alternative_content
+    
+    def get_children(self) -> list[Container]:
+        if self.filter():
+            return to_container(self.widget).get_children()
+        elif self.alternative_widget is not None:
+            return to_container(self.alternative_widget).get_children()
+        return []
+
         
         
 class WrapperContainer(Container):
@@ -289,78 +297,10 @@ class GridSplit(Container):
         self.vertical_align = vertical_align
         self.horizontal_align = horizontal_align
 
-        self._width_cache = SimpleCache(maxsize=10)
-        self._height_cache = SimpleCache(maxsize=10)
-        self._all_children_cache = self._build_all_children()
+        self._children_cache: SimpleCache[tuple[tuple[Container, ...], ...], list[list[Container]]] = (
+            SimpleCache(maxsize=1)
+        )
         self._remaining_space_window = Window()  # Dummy window.
-
-    def _build_all_children(self) -> list[list[Container]]:
-        result: list[list[Container]] = []
-        
-        # Padding Top.
-        if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.BOTTOM):
-            result.append([
-                Window(width=Dimension(preferred=0))
-                for _ in range(self.sizeX*2-1 +
-                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
-                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
-            ])
-        
-        for row in self.children:
-            buff: list[Container] = []
-            
-            # Padding Left.
-            if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT):
-                buff.append(Window(width=Dimension(preferred=0)))
-            
-            # The children with padding.
-            for child in row:
-                buff.append(child)
-                buff.append(
-                    Window(
-                        width=self.padding_width,
-                        height=self.padding_height,
-                        char=self.padding_char,
-                        style=self.padding_style,
-                    )
-                )
-            if buff:
-                buff.pop()
-
-            # Padding right.
-            if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT):
-                buff.append(Window(width=Dimension(preferred=0)))
-            
-            result.append(buff)
-            
-            result.append(
-                [Window(
-                    height=self.padding_height,
-                    width=self.padding_width,
-                    char=self.padding_char,
-                    style=self.padding_style,
-                ) for _ in range(self.sizeX*2-1 +
-                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
-                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))]
-            )
-        
-        if result:
-            result.pop()
-        
-        # Padding bottom.
-        if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.TOP):
-            result.append([
-                Window(width=Dimension(preferred=0))
-                for _ in range(self.sizeX*2-1 +
-                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
-                                (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
-            ])
-        
-        return result
-
-    @property
-    def _all_children(self) -> list[list[Container]]:
-        return self._all_children_cache
 
     def is_modal(self) -> bool:
         return self.modal
@@ -378,43 +318,109 @@ class GridSplit(Container):
         if self.width is not None:
             return to_dimension(self.width)
 
-        def get_dim():
-            if not (self.sizeY and self.sizeX):
-                return sum_layout_dimensions([])
-            
-            dimensions = []
-            children = self._all_children
-            
-            for column in range(len(children[0])):
-                dimensions.append(max_layout_dimensions(
-                    [r[column].preferred_width(max_available_width) for r in children]
-                ))
-
-            return sum_layout_dimensions(dimensions)
+        if not (self.sizeY and self.sizeX):
+            return sum_layout_dimensions([])
         
-        return self._width_cache.get(max_available_width, get_dim)
+        dimensions = []
+        children = self._all_children
+        
+        for column in range(len(children[0])):
+            dimensions.append(max_layout_dimensions(
+                [r[column].preferred_width(max_available_width) for r in children]
+            ))
+
+        return sum_layout_dimensions(dimensions)
         
     def preferred_height(self, width: int, max_available_height: int) -> Dimension:
         if self.height is not None:
             return to_dimension(self.height)
         
-        def get_dim():
-            if not (self.sizeY and self.sizeX):
-                return sum_layout_dimensions([])
-            
-            dimensions = [
-                max_layout_dimensions([c.preferred_height(width, max_available_height) for c in r])
-                for r in self._all_children
-            ]
-            
-            return sum_layout_dimensions(dimensions)
+        if not (self.sizeY and self.sizeX):
+            return sum_layout_dimensions([])
         
-        return self._height_cache.get((width, max_available_height), get_dim)
-    
+        dimensions = [
+            max_layout_dimensions([c.preferred_height(width, max_available_height) for c in r])
+            for r in self._all_children
+        ]
+        
+        return sum_layout_dimensions(dimensions)
+
     def reset(self) -> None:
         for r in self.children:
             for c in r:
                 c.reset()
+
+    @property
+    def _all_children(self) -> list[list[Container]]:
+        """
+        List of child objects, including padding.
+        """
+
+        def get() -> list[list[Container]]:
+            result: list[list[Container]] = []
+            
+            # Padding Top.
+            if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.BOTTOM):
+                result.append([
+                    Window(width=Dimension(preferred=0))
+                    for _ in range(self.sizeX*2-1 +
+                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
+                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
+                ])
+            
+            for row in self.children:
+                buff: list[Container] = []
+                
+                # Padding Left.
+                if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT):
+                    buff.append(Window(width=Dimension(preferred=0)))
+                
+                # The children with padding.
+                for child in row:
+                    buff.append(child)
+                    buff.append(
+                        Window(
+                            width=self.padding_width,
+                            height=self.padding_height,
+                            char=self.padding_char,
+                            style=self.padding_style,
+                        )
+                    )
+                if buff:
+                    buff.pop()
+
+                # Padding right.
+                if self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT):
+                    buff.append(Window(width=Dimension(preferred=0)))
+                
+                result.append(buff)
+                
+                result.append(
+                    [Window(
+                        height=self.padding_height,
+                        width=self.padding_width,
+                        char=self.padding_char,
+                        style=self.padding_style,
+                    ) for _ in range(self.sizeX*2-1 +
+                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
+                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))]
+                )
+            
+            if result:
+                result.pop()
+            
+            # Padding bottom.
+            if self.vertical_align in (VerticalAlign.CENTER, VerticalAlign.TOP):
+                result.append([
+                    Window(width=Dimension(preferred=0))
+                    for _ in range(self.sizeX*2-1 +
+                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.RIGHT)) +
+                                   (self.horizontal_align in (HorizontalAlign.CENTER, HorizontalAlign.LEFT)))
+                ])
+            
+            return result
+
+        return self._children_cache.get(tuple(tuple(r) for r in self.children), get)
 
     def _divide_widths(self, width: int) -> list[int] | None:
         children = self._all_children
