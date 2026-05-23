@@ -15,6 +15,7 @@ from .layout import (
     HorizontalLayout,
     GridLayout,
     Scrollable,
+    WrapperContainer,
 )
 
 from .managers import (
@@ -80,6 +81,7 @@ __all__ = [
     "WidgetState",
     "SwitchState",
     "WindowManager",
+    "WrapperContainer",
 ]
 
 

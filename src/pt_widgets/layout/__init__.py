@@ -4,6 +4,7 @@ from .containers import (
     get_vertical_write_positions,
     GridSplit,
     ConditionalContainer,
+    WrapperContainer,
 )
 
 from .controls import (
@@ -40,5 +41,6 @@ __all__ = [
     "HorizontalLayout",
     "GridLayout",
     "Scrollable",
+    "WrapperContainer",
 ]
 
