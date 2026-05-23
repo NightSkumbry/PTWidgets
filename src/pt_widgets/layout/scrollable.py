@@ -55,6 +55,8 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
         show_scrollbar_h: FilterOrBool = False,
         scrollbar_v: Scrollbar | None = None,
         scrollbar_h: Scrollbar | None = None,
+        min_items_padding: int = 0,
+        min_chars_padding: int = 0,
     ) -> None:
         self.content = content
         self.keep_focused_visible = to_filter(keep_focused_visible)
@@ -68,10 +70,14 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
         self.show_scrollbar_v = to_filter(show_scrollbar_v)
         self.show_scrollbar_h = to_filter(show_scrollbar_h)
 
-        self.vertical_scroll = 0
-        self.horizontal_scroll = 0
+        self.min_items_padding = min_items_padding
+        self.min_chars_padding = min_chars_padding
+
+        self.vertical_scroll: int = 0
+        self.horizontal_scroll: int = 0
 
         # Use the ScrollbarA preset from widgets/slider by default.
+
         self.scrollbar_v = scrollbar_v or ScrollbarA(orientation=Orientation.VERTICAL, width=1)
         self.scrollbar_h = scrollbar_h or ScrollbarA(orientation=Orientation.HORIZONTAL, height=1)
 
@@ -305,44 +311,136 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
                     # Fallback if get_app() fails (e.g. during test init without app running)
                     cursor_pos = list(temp_screen.cursor_positions.values())[0] if temp_screen.cursor_positions else None
 
-            if cursor_pos:
+            focused_container = self.get_focused_container()
+            bounding_box = self._get_bounding_box(focused_container, temp_screen)
+
+            if cursor_pos or bounding_box:
+                v_pos = get_vertical_write_positions(self.content, temp_write_position)
+                h_pos = get_horizontal_write_positions(self.content, temp_write_position)
+
+                # Vertical scroll update
                 if self.scroll_vertical():
-                    if self.vertical_scroll < cursor_pos.y - viewport_height + 1:
-                        self.vertical_scroll = cursor_pos.y - viewport_height + 1
-                    if self.vertical_scroll > cursor_pos.y:
-                        self.vertical_scroll = cursor_pos.y
+                    # Determine target range to keep visible
+                    ty_min: int | None = None
+                    ty_max: int | None = None
+                    
+                    if cursor_pos:
+                        ty_min, ty_max = cursor_pos.y, cursor_pos.y + 1
+                    elif bounding_box:
+                        _, _, ty_min, ty_max = bounding_box
+                    
+                    if ty_min is not None and ty_max is not None:
+                        target_y_min: int = ty_min
+                        target_y_max: int = ty_max
+
+                        # Find focused item index in vertical positions
+                        focused_v_idx = -1
+                        if v_pos:
+                            center_y = (target_y_min + target_y_max) // 2
+                            for idx, p in enumerate(v_pos):
+                                if p.ypos <= center_y < p.ypos + p.height:
+                                    focused_v_idx = idx
+                                    break
+                        
+                        if focused_v_idx != -1 and v_pos is not None:
+                            # Apply padding
+                            pad_start_idx = max(0, focused_v_idx - self.min_items_padding)
+                            pad_end_idx = min(len(v_pos) - 1, focused_v_idx + self.min_items_padding)
+                            
+                            target_y_min = v_pos[pad_start_idx].ypos - self.min_chars_padding
+                            target_y_max = v_pos[pad_end_idx].ypos + v_pos[pad_end_idx].height + self.min_chars_padding
+                        else:
+                            # Fallback to simple char padding if items not found
+                            target_y_min -= self.min_chars_padding
+                            target_y_max += self.min_chars_padding
+
+                        target_height = target_y_max - target_y_min
+                        
+                        if target_height <= viewport_height:
+                            # Range fits in viewport
+                            if self.vertical_scroll > target_y_min:
+                                self.vertical_scroll = target_y_min
+                            if self.vertical_scroll < target_y_max - viewport_height:
+                                self.vertical_scroll = target_y_max - viewport_height
+                        else:
+                            # Range too large, center focused element
+                            focused_elem_center: int = (target_y_min + target_y_max) // 2
+                            if focused_v_idx != -1 and v_pos:
+                                p = v_pos[focused_v_idx]
+                                focused_elem_center = p.ypos + p.height // 2
+                            
+                            self.vertical_scroll = focused_elem_center - viewport_height // 2
+                            
+                            # Ensure cursor (if any) or focused area is still visible
+                            if cursor_pos:
+                                self.vertical_scroll = max(self.vertical_scroll, cursor_pos.y - viewport_height + 1)
+                                self.vertical_scroll = min(self.vertical_scroll, cursor_pos.y)
+                            elif bounding_box:
+                                _, _, b_min_y, b_max_y = bounding_box
+                                if b_max_y - b_min_y <= viewport_height:
+                                    self.vertical_scroll = max(self.vertical_scroll, b_max_y - viewport_height)
+                                    self.vertical_scroll = min(self.vertical_scroll, b_min_y)
+
+                # Horizontal scroll update
                 if self.scroll_horizontal():
-                    if self.horizontal_scroll < cursor_pos.x - viewport_width + 1:
-                        self.horizontal_scroll = cursor_pos.x - viewport_width + 1
-                    if self.horizontal_scroll > cursor_pos.x:
-                        self.horizontal_scroll = cursor_pos.x
-            else:
-                focused_container = self.get_focused_container()
-                bounding_box = self._get_bounding_box(focused_container, temp_screen)
-                if bounding_box:
-                    min_x, max_x, min_y, max_y = bounding_box
-                    if self.scroll_vertical():
-                        if max_y - min_y >= viewport_height:
-                            # Taller than viewport, anchor to min_y
-                            self.vertical_scroll = min_y
+                    tx_min: int | None = None
+                    tx_max: int | None = None
+                    
+                    if cursor_pos:
+                        tx_min, tx_max = cursor_pos.x, cursor_pos.x + 1
+                    elif bounding_box:
+                        tx_min, tx_max, _, _ = bounding_box
+                    
+                    if tx_min is not None and tx_max is not None:
+                        target_x_min: int = tx_min
+                        target_x_max: int = tx_max
+
+                        # Find focused item index in horizontal positions
+                        focused_h_idx = -1
+                        if h_pos:
+                            center_x = (target_x_min + target_x_max) // 2
+                            for idx, p in enumerate(h_pos):
+                                if p.xpos <= center_x < p.xpos + p.width:
+                                    focused_h_idx = idx
+                                    break
+                        
+                        if focused_h_idx != -1 and h_pos:
+                            pad_start_idx = max(0, focused_h_idx - self.min_items_padding)
+                            pad_end_idx = min(len(h_pos) - 1, focused_h_idx + self.min_items_padding)
+                            
+                            target_x_min = h_pos[pad_start_idx].xpos - self.min_chars_padding
+                            target_x_max = h_pos[pad_end_idx].xpos + h_pos[pad_end_idx].width + self.min_chars_padding
                         else:
-                            if self.vertical_scroll < max_y - viewport_height:
-                                self.vertical_scroll = max_y - viewport_height
-                            if self.vertical_scroll > min_y:
-                                self.vertical_scroll = min_y
-                    if self.scroll_horizontal():
-                        if max_x - min_x >= viewport_width:
-                            # Wider than viewport, anchor to min_x
-                            self.horizontal_scroll = min_x
+                            target_x_min -= self.min_chars_padding
+                            target_x_max += self.min_chars_padding
+
+                        target_width = target_x_max - target_x_min
+                        
+                        if target_width <= viewport_width:
+                            if self.horizontal_scroll > target_x_min:
+                                self.horizontal_scroll = target_x_min
+                            if self.horizontal_scroll < target_x_max - viewport_width:
+                                self.horizontal_scroll = target_x_max - viewport_width
                         else:
-                            if self.horizontal_scroll < max_x - viewport_width:
-                                self.horizontal_scroll = max_x - viewport_width
-                            if self.horizontal_scroll > min_x:
-                                self.horizontal_scroll = min_x
+                            focused_elem_center = (target_x_min + target_x_max) // 2
+                            if focused_h_idx != -1 and h_pos:
+                                p = h_pos[focused_h_idx]
+                                focused_elem_center = p.xpos + p.width // 2
+                                
+                            self.horizontal_scroll = focused_elem_center - viewport_width // 2
+                            
+                            if cursor_pos:
+                                self.horizontal_scroll = max(self.horizontal_scroll, cursor_pos.x - viewport_width + 1)
+                                self.horizontal_scroll = min(self.horizontal_scroll, cursor_pos.x)
+                            elif bounding_box:
+                                b_min_x, b_max_x, _, _ = bounding_box
+                                if b_max_x - b_min_x <= viewport_width:
+                                    self.horizontal_scroll = max(self.horizontal_scroll, b_max_x - viewport_width)
+                                    self.horizontal_scroll = min(self.horizontal_scroll, b_min_x)
 
         # Final bounds check
-        self.vertical_scroll = max(0, min(self.vertical_scroll, virtual_height - viewport_height))
-        self.horizontal_scroll = max(0, min(self.horizontal_scroll, virtual_width - viewport_width))
+        self.vertical_scroll = int(max(0, min(self.vertical_scroll, virtual_height - viewport_height)))
+        self.horizontal_scroll = int(max(0, min(self.horizontal_scroll, virtual_width - viewport_width)))
 
         # 6. Copy visible area
         self._copy_over_screen(screen, temp_screen, write_position, viewport_width, viewport_height)
@@ -470,4 +568,3 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
                 height=write_pos.height,
                 width=write_pos.width,
             )
-
