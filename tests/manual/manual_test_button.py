@@ -3,7 +3,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from pt_widgets.widgets.button import Button
 from pt_widgets.widgets.label import Label
-from pt_widgets.widgets.switch import Switch, SwitchType
+from pt_widgets.widgets.switch import Switch, SwitchState, SwitchType
 from pt_widgets.layout.navigation import VerticalLayout, HorizontalLayout
 from pt_widgets.widgets.common import WidgetState, WidgetStyle
 from shared_styles import get_shared_style
@@ -14,7 +14,7 @@ def run():
     state2 = WidgetState(focusable=True, disabled=False)
     state3 = WidgetState(focusable=True, disabled=False)
     
-    state4 = WidgetState(True, False, checked=True)
+    state4 = SwitchState(True, False, checked=True)
 
     def toggle_2_3():
         state2.disabled = not state2.disabled

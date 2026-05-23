@@ -469,6 +469,7 @@ class Scrollbar:
         self.position = 0
         self.total_items = 0
         self.visible_items = 0
+        self.current_length = 0
         self._focused = False
 
         self.control = FormattedTextControl(
@@ -483,10 +484,12 @@ class Scrollbar:
             style=self._get_style,
         )
 
-    def update_state(self, position: int, total_items: int, visible_items: int) -> None:
+    def update_state(self, position: int, total_items: int, visible_items: int, length: int | None = None) -> None:
         self.position = position
         self.total_items = total_items
         self.visible_items = visible_items
+        if length is not None:
+            self.current_length = length
 
     def _get_part_style(self, style_obj: WidgetStyle) -> str:
         if self._focused:
@@ -497,17 +500,14 @@ class Scrollbar:
         if self.total_items <= self.visible_items or self.total_items == 0:
             return ""
 
-        length = 0
-        if self.orientation == Orientation.VERTICAL:
-            if isinstance(self.height, int):
-                length = self.height
-            elif self.window.render_info:
-                length = self.window.render_info.window_height
-        else: # HORIZONTAL
-            if isinstance(self.width, int):
-                length = self.width
-            elif self.window.render_info:
-                length = self.window.render_info.window_width
+        length = self.current_length
+        if length == 0:
+            if self.orientation == Orientation.VERTICAL:
+                if isinstance(self.height, int):
+                    length = self.height
+            else: # HORIZONTAL
+                if isinstance(self.width, int):
+                    length = self.width
         
         if length == 0:
             return ""

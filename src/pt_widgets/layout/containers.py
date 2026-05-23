@@ -41,6 +41,72 @@ class ConditionalContainer(PTConditionalContainer):
         self.widget = content
         self.alternative_widget = alternative_content
 
+    def get_children(self) -> list[Container]:
+        if self.filter():
+            return [to_container(self.widget)]
+        elif self.alternative_widget is not None:
+            return [to_container(self.alternative_widget)]
+        return []
+
+
+        
+        
+class WrapperContainer(Container):
+    def __init__(self, content: AnyContainer) -> None:
+        self.content = content
+        self.container = to_container(content)
+    
+    def get_children(self) -> list[Container]:
+        return [self.container]
+    
+    def reset(self) -> None:
+        self.container.reset()
+    
+    def preferred_width(self, max_available_width: int) -> Dimension:
+        return self.container.preferred_width(max_available_width)
+    
+    def preferred_height(self, width: int, max_available_height: int) -> Dimension:
+        return self.container.preferred_height(width, max_available_height)
+
+    def write_to_screen(
+        self,
+        screen: Screen,
+        mouse_handlers: MouseHandlers,
+        write_position: WritePosition,
+        parent_style: str,
+        erase_bg: bool,
+        z_index: int | None,
+    ) -> None:
+        self.container.write_to_screen(
+            screen, mouse_handlers, write_position, parent_style, erase_bg, z_index
+        )
+    
+    def is_modal(self) -> bool:
+        return self.container.is_modal()
+    
+    def get_key_bindings(self) -> KeyBindingsBase | None:
+        return self.container.get_key_bindings()
+    
+    def change_container(self, new_container: AnyContainer) -> None:
+        self.container = to_container(new_container)
+        self.content = new_container
+    
+    def get_horizontal_write_positions(
+        self,
+        write_position: WritePosition
+    ) -> list[WritePosition] | None:
+        return get_horizontal_write_positions(self.content, write_position)
+    
+    def get_vertical_write_positions(
+        self,
+        write_position: WritePosition
+    ) -> list[WritePosition] | None:
+        return get_vertical_write_positions(self.content, write_position)
+
+    def get_focused_container(self) -> AnyContainer:
+        from .navigation import get_focused_container
+        return get_focused_container(self.content)
+
 
 @runtime_checkable
 class WidgetContainer(Protocol):
@@ -100,6 +166,32 @@ def _(
     write_position: WritePosition
 ) -> list[WritePosition] | None:
     return container.get_horizontal_write_positions(write_position)
+
+
+@_get_vertical_write_positions.register(WrapperContainer)
+def _(container: WrapperContainer, write_position: WritePosition) -> list[WritePosition] | None:
+    return get_vertical_write_positions(container.content, write_position)
+
+@_get_horizontal_write_positions.register(WrapperContainer)
+def _(container: WrapperContainer, write_position: WritePosition) -> list[WritePosition] | None:
+    return get_horizontal_write_positions(container.content, write_position)
+
+
+@_get_vertical_write_positions.register(ConditionalContainer)
+def _(container: ConditionalContainer, write_position: WritePosition) -> list[WritePosition] | None:
+    if container.filter():
+        return get_vertical_write_positions(container.widget, write_position)
+    elif container.alternative_widget is not None:
+        return get_vertical_write_positions(container.alternative_widget, write_position)
+    return []
+
+@_get_horizontal_write_positions.register(ConditionalContainer)
+def _(container: ConditionalContainer, write_position: WritePosition) -> list[WritePosition] | None:
+    if container.filter():
+        return get_horizontal_write_positions(container.widget, write_position)
+    elif container.alternative_widget is not None:
+        return get_horizontal_write_positions(container.alternative_widget, write_position)
+    return []
 
 
 @_get_vertical_write_positions.register(HSplit)
@@ -392,19 +484,19 @@ class GridSplit(Container):
         z_index: int | None,
     ) -> None:
         style = parent_style + " " + to_str(self.style)
-        z_index = z_index if self.z_index is None else self.z_index
+        actual_z_index = z_index if self.z_index is None else self.z_index
         
         sizesX = self._divide_widths(write_position.width)
         if sizesX is None:
             self.window_too_small.write_to_screen(
-                screen, mouse_handlers, write_position, style, erase_bg, z_index
+                screen, mouse_handlers, write_position, style, erase_bg, actual_z_index
             )
             return
         
         sizesY = self._divide_heights(sizesX, write_position.height)
         if sizesY is None:
             self.window_too_small.write_to_screen(
-                screen, mouse_handlers, write_position, style, erase_bg, z_index
+                screen, mouse_handlers, write_position, style, erase_bg, actual_z_index
             )
             return
         
@@ -420,7 +512,7 @@ class GridSplit(Container):
                     WritePosition(xpos, ypos, width, height),
                     style,
                     erase_bg,
-                    z_index,
+                    actual_z_index,
                 )
                 xpos += width
                 
@@ -437,7 +529,7 @@ class GridSplit(Container):
                     WritePosition(xpos, ypos, remaining_width, height),
                     style,
                     erase_bg,
-                    z_index,
+                    actual_z_index,
                 )
             
             ypos += height
@@ -455,7 +547,7 @@ class GridSplit(Container):
                 WritePosition(write_position.xpos, ypos, sum(sizesX), remaining_height),
                 style,
                 erase_bg,
-                z_index,
+                actual_z_index,
             )
         
 
@@ -567,3 +659,8 @@ class GridSplit(Container):
         
         return wp
 
+
+    
+    
+    
+    

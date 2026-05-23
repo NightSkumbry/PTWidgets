@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.document import Document
 from prompt_toolkit.filters import Condition
+from prompt_toolkit.formatted_text import AnyFormattedText, to_formatted_text, fragment_list_to_text
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.layout import AnyDimension, Container, VSplit, Window, BufferControl, D, to_dimension
 from prompt_toolkit.validation import Validator
@@ -17,7 +18,7 @@ from pt_widgets.widgets.common import BoolOrCallable, WidgetState, WidgetStyle, 
 
 @dataclass
 class TextEditState(WidgetState):
-    text: str
+    text: AnyFormattedText
     editing: bool
     error: bool
 
@@ -25,9 +26,11 @@ class TextEditState(WidgetState):
 class TextEdit:
     def __init__(
         self,
-        text: str = "",
+        text: AnyFormattedText | None = None,
         multiline: bool = False,
         validator: Validator | None = None,
+        save_handler: Callable[[str], None] | None = None,
+        update_button_text_from_buffer: bool = True,
         width: AnyDimension = None,
         height: AnyDimension = None,
         style: WidgetStyle | None = None,
@@ -44,9 +47,11 @@ class TextEdit:
     ) -> None:
         self.multiline = multiline
         self.validator = validator
+        self.save_handler = save_handler
         self.width = width
         self.height = height
         self._focused = False
+        self.update_button_text_from_buffer = update_button_text_from_buffer
         
         # Styles
         self.style = combine_styles(style, WidgetStyle(
@@ -70,14 +75,14 @@ class TextEdit:
         
         # State
         self.state = state if state is not None else TextEditState(
-            text=text,
+            text=text if text is not None else "",
             editing=False,
             error=False,
             focusable=True,
             disabled=False
         )
         
-        self._original_text = text
+        self._original_display_text = self.state.text
         
         self.with_left_bracket = with_left_bracket
         self.with_right_bracket = with_right_bracket
@@ -86,7 +91,7 @@ class TextEdit:
 
         # Buffer setup
         self.buffer = Buffer(
-            document=Document(text, 0),
+            document=Document(self._get_plain_text()),
             multiline=multiline,
             read_only=Condition(lambda: not self.state.editing),
             on_text_changed=self._on_text_changed,
@@ -100,7 +105,7 @@ class TextEdit:
         
         # Display mode button
         self.button = Button(
-            text=lambda: self.buffer.text,
+            text=lambda: self.state.text,
             handler=self._start_editing,
             width=width,
             height=height,
@@ -119,6 +124,9 @@ class TextEdit:
             filter=Condition(lambda: self.state.editing),
             alternative_content=self.button,
         )
+
+    def _get_plain_text(self) -> str:
+        return fragment_list_to_text(to_formatted_text(self.state.text))
 
     def _create_editor_layout(self) -> VSplit:
         def get_bracket_layout(is_right: bool):
@@ -178,17 +186,22 @@ class TextEdit:
         return D.exact(1)
 
     def _start_editing(self) -> None:
-        self._original_text = self.buffer.text
+        plain = self._get_plain_text()
+        self.buffer.set_document(Document(plain, len(plain)), bypass_readonly=True)
+        self._original_display_text = self.state.text
         self.state.editing = True
         get_app().layout.focus(self.buffer_control)
 
     @property
-    def text(self) -> str:
-        return self.buffer.text
+    def text(self) -> AnyFormattedText:
+        return self.state.text
 
     @text.setter
-    def text(self, value: str) -> None:
-        self.buffer.set_document(Document(value, 0), bypass_readonly=True)
+    def text(self, value: AnyFormattedText) -> None:
+        self.state.text = value
+        if not self.state.editing:
+            plain = fragment_list_to_text(to_formatted_text(value))
+            self.buffer.set_document(Document(plain, 0), bypass_readonly=True)
 
     def _on_text_changed(self, buffer: Buffer) -> None:
         self.state.error = False
@@ -234,13 +247,19 @@ class TextEdit:
                     self.state.error = True
                     return
             
+            new_text = self.buffer.text
             self.state.editing = False
             self.state.error = False
             get_app().layout.focus(self.button)
+            
+            if self.save_handler:
+                self.save_handler(new_text)
+            if self.update_button_text_from_buffer:
+                self.state.text = new_text
 
         @kb.add("escape", filter=Condition(lambda: self.state.editing))
         def _(event: KeyPressEvent):
-            self.buffer.text = self._original_text
+            self.state.text = self._original_display_text
             self.state.editing = False
             self.state.error = False
             get_app().layout.focus(self.button)

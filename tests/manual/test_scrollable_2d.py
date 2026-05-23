@@ -34,6 +34,8 @@ def main():
         scroll_horizontal=True,
         show_scrollbar_v=True,
         show_scrollbar_h=True,
+        min_items_padding=2,
+        min_chars_padding=1,
     )
     
     root = VerticalLayout([

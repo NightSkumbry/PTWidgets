@@ -2,6 +2,7 @@ from functools import singledispatch
 from typing import Callable, NamedTuple, Sequence, override, Protocol, runtime_checkable
 
 from prompt_toolkit.application import get_app
+from prompt_toolkit.cache import SimpleCache
 from prompt_toolkit.filters import Always, Condition, Filter
 from prompt_toolkit.key_binding import KeyBindings, KeyBindingsBase, KeyPressEvent, merge_key_bindings
 from prompt_toolkit.layout import (
@@ -17,7 +18,7 @@ from prompt_toolkit.layout import (
 )
 
 from pt_widgets.exceptions import FocusException
-from pt_widgets.layout.containers import GridSplit, ConditionalContainer
+from pt_widgets.layout.containers import GridSplit, ConditionalContainer, WrapperContainer
 
 
 @runtime_checkable
@@ -57,6 +58,10 @@ def _(container: ConditionalContainer) -> bool:
         return is_focusable(container.alternative_widget)
     return False
 
+@_is_focusable.register(WrapperContainer)
+def _(container: WrapperContainer) -> bool:
+    return is_focusable(container.content)
+
 @_is_focusable.register(DynamicContainer)
 def _(container: DynamicContainer) -> bool:
     widget = container.get_container()
@@ -91,22 +96,16 @@ def _(container: ConditionalContainer) -> None:
     else:
         raise FocusException("This ConditionalContainer is currently hidden")
     
-    if isinstance(widget, Focusable):
-        if widget.is_focusable():
-            widget.focus()
-            return
-        raise FocusException("This container is not focusable")
-    _focus(to_container(widget))
+    focus(widget)
+
+@_focus.register(WrapperContainer)
+def _(container: WrapperContainer) -> None:
+    focus(container.content)
 
 @_focus.register(DynamicContainer)
 def _(container: DynamicContainer) -> None:
     widget = container.get_container()
-    if isinstance(widget, Focusable):
-        if widget.is_focusable():
-            widget.focus()
-            return
-        raise FocusException("This container is not focusable")
-    _focus(to_container(widget))
+    focus(widget)
 
 
 def unfocus(container: AnyContainer) -> None:
@@ -126,11 +125,46 @@ def _(container: ConditionalContainer) -> None:
     if container.alternative_widget is not None:
         unfocus(container.alternative_widget)
 
+@_unfocus.register(WrapperContainer)
+def _(container: WrapperContainer) -> None:
+    unfocus(container.content)
+
 @_unfocus.register(DynamicContainer)
 def _(container: DynamicContainer) -> None:
     widget = container.get_container()
     if widget is not None:
         unfocus(widget)
+
+
+def get_focused_container(container: AnyContainer) -> AnyContainer:
+    if isinstance(container, Navigation):
+        return container.get_focused_container()
+    return _get_focused_container(to_container(container))
+
+@singledispatch
+def _get_focused_container(container: Container) -> AnyContainer:
+    if isinstance(container, Navigation):
+        return container.get_focused_container()
+    return container
+
+@_get_focused_container.register(ConditionalContainer)
+def _(container: ConditionalContainer) -> AnyContainer:
+    if container.filter():
+        return get_focused_container(container.widget)
+    elif container.alternative_widget is not None:
+        return get_focused_container(container.alternative_widget)
+    return container
+
+@_get_focused_container.register(WrapperContainer)
+def _(container: WrapperContainer) -> AnyContainer:
+    return get_focused_container(container.content)
+
+@_get_focused_container.register(DynamicContainer)
+def _(container: DynamicContainer) -> AnyContainer:
+    widget = container.get_container()
+    if widget is not None:
+        return get_focused_container(widget)
+    return container
             
     
 class VerticalLayout:
@@ -179,11 +213,14 @@ class VerticalLayout:
         self._last_focus: int = base_focus
         self.shift_point = shift_point
         self.active = False
+        self._focusable_indices_cache = SimpleCache(maxsize=1)
         
     
     # Focusable
     def is_focusable(self) -> bool:
-        return self.focusable and any(is_focusable(c) for c in self.widgets)
+        def get():
+            return self.focusable and any(is_focusable(c) for c in self.widgets)
+        return self._focusable_indices_cache.get(("is_focusable", get_app().render_counter), get)
     
     def focus(self) -> None:
         self.active = True
@@ -207,7 +244,9 @@ class VerticalLayout:
     
     @property
     def _focusable_children_indices(self) -> list[int]:
-        return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        def get():
+            return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        return self._focusable_indices_cache.get(get_app().render_counter, get)
     
     def _focus_closest(self) -> None:
         focusable_indices = self._focusable_children_indices
@@ -369,11 +408,14 @@ class HorizontalLayout:
         self._last_focus: int = base_focus
         self.shift_point = shift_point
         self.active = False
+        self._focusable_indices_cache = SimpleCache(maxsize=1)
         
     
     # Focusable
     def is_focusable(self) -> bool:
-        return self.focusable and any(is_focusable(c) for c in self.widgets)
+        def get():
+            return self.focusable and any(is_focusable(c) for c in self.widgets)
+        return self._focusable_indices_cache.get(("is_focusable", get_app().render_counter), get)
     
     def focus(self) -> None:
         self.active = True
@@ -397,7 +439,9 @@ class HorizontalLayout:
     
     @property
     def _focusable_children_indices(self) -> list[int]:
-        return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        def get():
+            return [i for i, c in enumerate(self.widgets) if is_focusable(c)]
+        return self._focusable_indices_cache.get(get_app().render_counter, get)
     
     def _focus_closest(self) -> None:
         focusable_indices = self._focusable_children_indices
@@ -827,5 +871,3 @@ class GridLayout:
             self.move_focus_down()
         
         return merge_key_bindings([kb, default_bindings])
-
-    

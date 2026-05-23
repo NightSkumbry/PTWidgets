@@ -7,6 +7,8 @@ from .brackets import (
     BracketType,
 )
 
+from .button import Button
+
 from .common import (
     WidgetStyle,
     combine_styles,
@@ -17,7 +19,9 @@ from .common import (
 
 from .button import Button
 from .label import Label
+
 from .slider import (
+    FillMode,
     Slider,
     SliderA,
     SliderB,
@@ -26,13 +30,14 @@ from .slider import (
     Scrollbar,
     ScrollbarA,
     ScrollbarB,
-    FillMode,
 )
+
 from .switch import (
     Switch,
     SwitchType,
     Checkbox,
     RadioButton,
+    SwitchState,
 )
 
 from .text_edit import TextEdit
@@ -42,15 +47,16 @@ __all__ = [
     "ParenthesisContentGenerator",
     "SquareBracketsContentGenerator",
     "CurlyBracketsContentGenerator",
+    "BracketsControl",
+    "BracketType",
+    "Button",
     "WidgetStyle",
     "combine_styles",
     "WidgetState",
     "BoolOrCallable",
     "to_bool",
-    "BracketsControl",
-    "BracketType",
-    "Button",
     "Label",
+    "FillMode",
     "Slider",
     "SliderA",
     "SliderB",
@@ -59,11 +65,12 @@ __all__ = [
     "Scrollbar",
     "ScrollbarA",
     "ScrollbarB",
-    "FillMode",
     "Switch",
     "SwitchType",
     "Checkbox",
     "RadioButton",
+    "SwitchState",
     "TextEdit",
 ]
+
 
