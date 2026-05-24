@@ -77,7 +77,6 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
         self.horizontal_scroll: int = 0
 
         # Use the ScrollbarA preset from widgets/slider by default.
-
         self.scrollbar_v = scrollbar_v or ScrollbarA(orientation=Orientation.VERTICAL, width=1)
         self.scrollbar_h = scrollbar_h or ScrollbarA(orientation=Orientation.HORIZONTAL, height=1)
 
@@ -200,9 +199,9 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
     def _get_bounding_box(self, container: AnyContainer, temp_screen: Screen) -> tuple[int, int, int, int] | None:
         """Find the min and max X/Y position of all windows within a container on the virtual screen."""
         min_y = float('inf')
-        max_y = -1
+        max_y = -1.0
         min_x = float('inf')
-        max_x = -1
+        max_x = -1.0
         
         def walk(c: AnyContainer) -> None:
             nonlocal min_y, max_y, min_x, max_x
@@ -211,10 +210,10 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
             # If this part of the container tree is a Window that was drawn
             if isinstance(c_cont, Window) and c_cont in temp_screen.visible_windows_to_write_positions:
                 pos = temp_screen.visible_windows_to_write_positions[c_cont]
-                min_y = min(min_y, pos.ypos)
-                max_y = max(max_y, pos.ypos + pos.height)
-                min_x = min(min_x, pos.xpos)
-                max_x = max(max_x, pos.xpos + pos.width)
+                min_y = min(min_y, float(pos.ypos))
+                max_y = max(max_y, float(pos.ypos + pos.height))
+                min_x = min(min_x, float(pos.xpos))
+                max_x = max(max_x, float(pos.xpos + pos.width))
             
             # Recursively walk the layout tree
             if hasattr(c, "get_children"):
@@ -465,18 +464,26 @@ class Scrollable(Container, Navigation, Focusable, WidgetContainer):
             )
 
         # 7. Draw Scrollbars
+        # Actual content size in viewport (clamped by viewport size)
+        # We want scrollbars to be tight to the container if it's smaller than viewport.
+        actual_w = min(v_width, viewport_width)
+        actual_h = min(v_height, viewport_height)
+
         if show_v:
             self.scrollbar_v.update_state(self.vertical_scroll, virtual_height, viewport_height, length=viewport_height)
-            sb_v_pos = WritePosition(xpos=write_position.xpos + viewport_width, ypos=write_position.ypos, width=1, height=viewport_height)
+            # Position it at the right edge of actual content width
+            sb_v_pos = WritePosition(xpos=write_position.xpos + actual_w, ypos=write_position.ypos, width=1, height=viewport_height)
             to_container(self.scrollbar_v).write_to_screen(screen, mouse_handlers, sb_v_pos, parent_style, erase_bg, z_index)
             
         if show_h:
             self.scrollbar_h.update_state(self.horizontal_scroll, virtual_width, viewport_width, length=viewport_width)
-            sb_h_pos = WritePosition(xpos=write_position.xpos, ypos=write_position.ypos + viewport_height, width=viewport_width, height=1)
+            # Position it at the bottom edge of actual content height
+            sb_h_pos = WritePosition(xpos=write_position.xpos, ypos=write_position.ypos + actual_h, width=viewport_width, height=1)
             to_container(self.scrollbar_h).write_to_screen(screen, mouse_handlers, sb_h_pos, parent_style, erase_bg, z_index)
             
         if show_v and show_h:
-            screen.data_buffer[write_position.ypos + viewport_height][write_position.xpos + viewport_width] = Char(char=" ", style=parent_style)
+            # Corner intersection
+            screen.data_buffer[write_position.ypos + actual_h][write_position.xpos + actual_w] = Char(char=" ", style=parent_style)
 
         screen.width = max(screen.width, write_position.xpos + write_position.width)
         screen.height = max(screen.height, write_position.ypos + write_position.height)

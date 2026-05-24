@@ -22,8 +22,8 @@ class Button:
         style: WidgetStyle | None = None,
         brackets_style: WidgetStyle | None = None,
         state: WidgetState | None = None,
-        with_left_bracket: BoolOrCallable = False,
-        with_right_bracket: BoolOrCallable = False,
+        with_left_bracket: BoolOrCallable = True,
+        with_right_bracket: BoolOrCallable = True,
         bracket_type: BracketType = BracketType.SQUARE,
         custom_key_bindings: KeyBindings | None = None,
     ) -> None:

@@ -42,6 +42,8 @@ class ConditionalContainer(PTConditionalContainer):
         self.alternative_widget = alternative_content
 
     def get_children(self) -> list[Container]:
+        # Return the container itself to preserve modal/keybindings property 
+        # in the layout tree.
         if self.filter():
             return [to_container(self.widget)]
         elif self.alternative_widget is not None:
@@ -57,6 +59,7 @@ class WrapperContainer(Container):
         self.container = to_container(content)
     
     def get_children(self) -> list[Container]:
+        # Return the wrapped container as a child to maintain hierarchy.
         return [self.container]
     
     def reset(self) -> None:
@@ -658,9 +661,3 @@ class GridSplit(Container):
             ypos += height
         
         return wp
-
-
-    
-    
-    
-    
