@@ -76,11 +76,13 @@ from enum import Enum
 from typing import Callable
 
 from prompt_toolkit.application import get_app
-from prompt_toolkit.formatted_text import AnyFormattedText
+from prompt_toolkit.formatted_text import AnyFormattedText, StyleAndTextTuples
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import AnyDimension, Container, FormattedTextControl, Window
+from prompt_toolkit.layout.dimension import Dimension
 
 from pt_widgets.widgets.common import WidgetState, WidgetStyle, combine_styles
+from pt_widgets.layout.controls import ContentGenerator, ExpandableControl
 
 
 class FillMode(Enum):
@@ -89,7 +91,7 @@ class FillMode(Enum):
     NONE = "none"
 
 
-class Slider:
+class Slider(ContentGenerator):
     def __init__(
         self,
         value: float = 0,
@@ -165,37 +167,47 @@ class Slider:
         self._focused = False
         self.state = state if state is not None else WidgetState(focusable=True, disabled=False)
 
-        self.control = FormattedTextControl(
-            self._get_formatted_text,
+        self._current_width = 20
+        self.control = ExpandableControl(
+            self,
             key_bindings=self._get_key_bindings(),
             focusable=True,
-            show_cursor=False,
         )
+        
+        win_width = width
+        if win_width is None:
+            win_width = Dimension(min=1, preferred=20)
+            
         self.window = Window(
             content=self.control,
-            width=width,
+            width=win_width,
             height=height,
             dont_extend_height=True,
             style=self._get_style,
         )
 
-    def _get_part_style(self, style_obj: WidgetStyle) -> str:
-        if self.state.disabled:
-            return style_obj.disabled
-        if self._focused:
-            return style_obj.focused
-        return style_obj.base
+    def init(self, width: int, height: int, style: str) -> None:
+        self._current_width = width
 
-    def _get_formatted_text(self) -> AnyFormattedText:
-        width = 20
-        if isinstance(self.width, int):
-            width = self.width
-        elif self.window.render_info:
-             width = self.window.render_info.window_width
+    def get_line(self, y: int) -> StyleAndTextTuples:
+        if y > 0:
+            return []
+            
+        width = self._current_width
         
-        content_width = width - len(self.left_edge_char) - len(self.right_edge_char)
+        # Calculate available content width
+        left_len = len(self.left_edge_char)
+        right_len = len(self.right_edge_char)
+        content_width = width - left_len - right_len
+        
         if content_width < 1:
-            return ""
+            # Fallback for very small widths: just show edges or nothing
+            result = []
+            if left_len > 0 and width >= left_len:
+                result.append((self._get_part_style(self.left_edge_style), self.left_edge_char))
+            if right_len > 0 and width >= left_len + right_len:
+                result.append((self._get_part_style(self.right_edge_style), self.right_edge_char))
+            return result
             
         range_val = self.max_val - self.min_val
         if range_val == 0:
@@ -203,7 +215,9 @@ class Slider:
         else:
             percent = (self.value - self.min_val) / range_val
         
-        slots = max(0, content_width - 1)
+        # Clamp percent and calculate position
+        percent = max(0, min(1, percent))
+        slots = content_width - 1
         bar_pos = int(round(percent * slots))
         
         result = []
@@ -229,6 +243,13 @@ class Slider:
             result.append((self._get_part_style(self.right_edge_style), self.right_edge_char))
             
         return result
+
+    def _get_part_style(self, style_obj: WidgetStyle) -> str:
+        if self.state.disabled:
+            return style_obj.disabled
+        if self._focused:
+            return style_obj.focused
+        return style_obj.base
 
     def _get_style(self) -> str:
         if self.state.disabled:
@@ -268,6 +289,7 @@ class Slider:
     # MagicContainer
     def __pt_container__(self) -> Container:
         return self.window
+
 
 
 class SliderA(Slider):
