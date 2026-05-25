@@ -188,9 +188,11 @@ class VerticalLayout:
         base_focus: int = 0,
         up_filter: Filter = Always(),
         down_filter: Filter = Always(),
+        on_focus_changed: Callable[[int], None] | None = None,
     ) -> None:
         self.up_filter = up_filter
         self.down_filter = down_filter
+        self.on_focus_changed = on_focus_changed
         
         self.container = HSplit(
             children=children,
@@ -215,7 +217,12 @@ class VerticalLayout:
         self.active = False
         self._focusable_indices_cache = SimpleCache(maxsize=1)
         
-    
+    def _set_focus(self, index: int) -> None:
+        if self._last_focus != index:
+            self._last_focus = index
+            if self.on_focus_changed:
+                self.on_focus_changed(index)
+
     # Focusable
     def is_focusable(self) -> bool:
         def get():
@@ -251,7 +258,7 @@ class VerticalLayout:
     def _focus_closest(self) -> None:
         focusable_indices = self._focusable_children_indices
         closest = min(focusable_indices, key=lambda i: abs(i - self._last_focus))
-        self._last_focus = closest
+        self._set_focus(closest)
         focus(self.widgets[closest])
         
     def move_focus_up(self, amount: int = 1) -> None:
@@ -268,7 +275,7 @@ class VerticalLayout:
             base_index = (-1) % len(focusable_indices)
         
         if not self.active:
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
         else:
             base_index -= amount
@@ -280,7 +287,7 @@ class VerticalLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus])
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
     
     def move_focus_down(self, amount: int = 1) -> None:
@@ -297,7 +304,7 @@ class VerticalLayout:
             base_index = 0
         
         if not self.active:
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
         else:
             base_index += amount
@@ -309,7 +316,7 @@ class VerticalLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus])
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
         
     def _register_key_bindings(self, kb: KeyBindingsBase | None) -> KeyBindingsBase:
@@ -318,6 +325,10 @@ class VerticalLayout:
         
         default_bindings = KeyBindings()
         
+        @Condition
+        def modal_filter() -> bool:
+            return not to_container(self.widgets[self._last_focus]).is_modal()
+
         @Condition
         def up_filter() -> bool:
             fc = self._focusable_children_indices
@@ -342,20 +353,20 @@ class VerticalLayout:
         def shift_point_filter() -> bool:
             return self.shift_point
         
-        @default_bindings.add("up", filter=up_filter & self.up_filter)
+        @default_bindings.add("up", filter=up_filter & self.up_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_up()
         
-        @default_bindings.add("down", filter=down_filter & self.down_filter)
+        @default_bindings.add("down", filter=down_filter & self.down_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_down()
         
         
-        @default_bindings.add("s-up", filter=up_filter & self.up_filter & shift_point_filter)
+        @default_bindings.add("s-up", filter=up_filter & self.up_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_up()
         
-        @default_bindings.add("s-down", filter=down_filter & self.down_filter & shift_point_filter)
+        @default_bindings.add("s-down", filter=down_filter & self.down_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_down()
         
@@ -383,9 +394,11 @@ class HorizontalLayout:
         base_focus: int = 0,
         left_filter: Filter = Always(),
         right_filter: Filter = Always(),
+        on_focus_changed: Callable[[int], None] | None = None,
     ) -> None:
         self.left_filter = left_filter
         self.right_filter = right_filter
+        self.on_focus_changed = on_focus_changed
         
         self.container = VSplit(
             children=children,
@@ -410,6 +423,11 @@ class HorizontalLayout:
         self.active = False
         self._focusable_indices_cache = SimpleCache(maxsize=1)
         
+    def _set_focus(self, index: int) -> None:
+        if self._last_focus != index:
+            self._last_focus = index
+            if self.on_focus_changed:
+                self.on_focus_changed(index)
     
     # Focusable
     def is_focusable(self) -> bool:
@@ -446,7 +464,7 @@ class HorizontalLayout:
     def _focus_closest(self) -> None:
         focusable_indices = self._focusable_children_indices
         closest = min(focusable_indices, key=lambda i: abs(i - self._last_focus))
-        self._last_focus = closest
+        self._set_focus(closest)
         focus(self.widgets[closest])
     
     def move_focus_left(self, amount: int = 1) -> None:
@@ -463,7 +481,7 @@ class HorizontalLayout:
             base_index = (-1) % len(focusable_indices)
         
         if not self.active:
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
         else:
             base_index -= amount
@@ -475,7 +493,7 @@ class HorizontalLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus])
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
     
     def move_focus_right(self, amount: int = 1) -> None:
@@ -492,7 +510,7 @@ class HorizontalLayout:
             base_index = 0
         
         if not self.active:
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
         else:
             base_index += amount
@@ -504,7 +522,7 @@ class HorizontalLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus])
-            self._last_focus = focusable_indices[base_index]
+            self._set_focus(focusable_indices[base_index])
             focus(self.widgets[focusable_indices[base_index]])
         
     def _register_key_bindings(self, kb: KeyBindingsBase | None) -> KeyBindingsBase:
@@ -513,6 +531,10 @@ class HorizontalLayout:
         
         default_bindings = KeyBindings()
         
+        @Condition
+        def modal_filter() -> bool:
+            return not to_container(self.widgets[self._last_focus]).is_modal()
+
         @Condition
         def left_filter() -> bool:
             fc = self._focusable_children_indices
@@ -537,20 +559,20 @@ class HorizontalLayout:
         def shift_point_filter() -> bool:
             return self.shift_point
         
-        @default_bindings.add("left", filter=left_filter & self.left_filter)
+        @default_bindings.add("left", filter=left_filter & self.left_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_left()
         
-        @default_bindings.add("right", filter=right_filter & self.right_filter)
+        @default_bindings.add("right", filter=right_filter & self.right_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_right()
         
         
-        @default_bindings.add("s-left", filter=left_filter & self.left_filter & shift_point_filter)
+        @default_bindings.add("s-left", filter=left_filter & self.left_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_left()
         
-        @default_bindings.add("s-right", filter=right_filter & self.right_filter & shift_point_filter)
+        @default_bindings.add("s-right", filter=right_filter & self.right_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_right()
         
@@ -583,11 +605,13 @@ class GridLayout:
         right_filter: Filter = Always(),
         up_filter: Filter = Always(),
         down_filter: Filter = Always(),
+        on_focus_changed: Callable[[tuple[int, int]], None] | None = None,
     ) -> None:
         self.left_filter = left_filter
         self.right_filter = right_filter
         self.up_filter = up_filter
         self.down_filter = down_filter
+        self.on_focus_changed = on_focus_changed
         
         self.container = GridSplit(
             children=children,
@@ -613,6 +637,12 @@ class GridLayout:
         self._last_focus: tuple[int, int] = base_focus
         self.shift_point = shift_point
         self.active = False
+        
+    def _set_focus(self, index: tuple[int, int]) -> None:
+        if self._last_focus != index:
+            self._last_focus = index
+            if self.on_focus_changed:
+                self.on_focus_changed(index)
     
     # Focusable
     def is_focusable(self) -> bool:
@@ -657,7 +687,7 @@ class GridLayout:
     def _focus_closest(self) -> None:
         focusable_indices = self._focusable_children_indices
         closest = min(focusable_indices, key=lambda i: abs(i[0] - self._last_focus[0]) + abs(i[1] - self._last_focus[1]))
-        self._last_focus = closest
+        self._set_focus(closest)
         focus(self.widgets[closest[1]][closest[0]])
 
     def move_focus_left(self, amount: int = 1) -> None:
@@ -675,7 +705,7 @@ class GridLayout:
             base_index = (-1) % len(focusable_indices)
         
         if not self.active:
-            self._last_focus = focusable_indices[base_index], last_y
+            self._set_focus((focusable_indices[base_index], last_y))
             focus(self.widgets[last_y][focusable_indices[base_index]])
         else:
             base_index -= amount
@@ -687,7 +717,7 @@ class GridLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
-            self._last_focus = focusable_indices[base_index], last_y
+            self._set_focus((focusable_indices[base_index], last_y))
             focus(self.widgets[last_y][focusable_indices[base_index]])
     
     def move_focus_right(self, amount: int = 1) -> None:
@@ -705,7 +735,7 @@ class GridLayout:
             base_index = 0
         
         if not self.active:
-            self._last_focus = focusable_indices[base_index], last_y
+            self._set_focus((focusable_indices[base_index], last_y))
             focus(self.widgets[last_y][focusable_indices[base_index]])
         else:
             base_index += amount
@@ -717,7 +747,7 @@ class GridLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
-            self._last_focus = focusable_indices[base_index], last_y
+            self._set_focus((focusable_indices[base_index], last_y))
             focus(self.widgets[last_y][focusable_indices[base_index]])
     
     def move_focus_up(self, amount: int = 1) -> None:
@@ -735,7 +765,7 @@ class GridLayout:
             base_index = (-1) % len(focusable_indices)
         
         if not self.active:
-            self._last_focus = last_x, focusable_indices[base_index]
+            self._set_focus((last_x, focusable_indices[base_index]))
             focus(self.widgets[focusable_indices[base_index]][last_x])
         else:
             base_index -= amount
@@ -747,7 +777,7 @@ class GridLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
-            self._last_focus = last_x, focusable_indices[base_index]
+            self._set_focus((last_x, focusable_indices[base_index]))
             focus(self.widgets[focusable_indices[base_index]][last_x])
     
     def move_focus_down(self, amount: int = 1) -> None:
@@ -765,7 +795,7 @@ class GridLayout:
             base_index = 0
         
         if not self.active:
-            self._last_focus = last_x, focusable_indices[base_index]
+            self._set_focus((last_x, focusable_indices[base_index]))
             focus(self.widgets[focusable_indices[base_index]][last_x])
         else:
             base_index += amount
@@ -777,7 +807,7 @@ class GridLayout:
                 base_index = len(focusable_indices) - 1
             
             unfocus(self.widgets[self._last_focus[1]][self._last_focus[0]])
-            self._last_focus = last_x, focusable_indices[base_index]
+            self._set_focus((last_x, focusable_indices[base_index]))
             focus(self.widgets[focusable_indices[base_index]][last_x])
 
     def _register_key_bindings(self, kb: KeyBindingsBase | None) -> KeyBindingsBase:
@@ -786,6 +816,10 @@ class GridLayout:
         
         default_bindings = KeyBindings()
         
+        @Condition
+        def modal_filter() -> bool:
+            return not to_container(self.widgets[self._last_focus[1]][self._last_focus[0]]).is_modal()
+
         # horizontal
         @Condition
         def left_filter() -> bool:
@@ -813,20 +847,20 @@ class GridLayout:
         def shift_point_filter() -> bool:
             return self.shift_point
         
-        @default_bindings.add("left", filter=left_filter & self.left_filter)
+        @default_bindings.add("left", filter=left_filter & self.left_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_left()
         
-        @default_bindings.add("right", filter=right_filter & self.right_filter)
+        @default_bindings.add("right", filter=right_filter & self.right_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_right()
         
 
-        @default_bindings.add("s-left", filter=left_filter & self.left_filter & shift_point_filter)
+        @default_bindings.add("s-left", filter=left_filter & self.left_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_left()
         
-        @default_bindings.add("s-right", filter=right_filter & self.right_filter & shift_point_filter)
+        @default_bindings.add("s-right", filter=right_filter & self.right_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_right()
             
@@ -853,20 +887,20 @@ class GridLayout:
                     return True
             return False
         
-        @default_bindings.add("up", filter=up_filter & self.up_filter)
+        @default_bindings.add("up", filter=up_filter & self.up_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_up()
         
-        @default_bindings.add("down", filter=down_filter & self.down_filter)
+        @default_bindings.add("down", filter=down_filter & self.down_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_down()
         
 
-        @default_bindings.add("s-up", filter=up_filter & self.up_filter & shift_point_filter)
+        @default_bindings.add("s-up", filter=up_filter & self.up_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_up()
         
-        @default_bindings.add("s-down", filter=down_filter & self.down_filter & shift_point_filter)
+        @default_bindings.add("s-down", filter=down_filter & self.down_filter & shift_point_filter & modal_filter)
         def _(event: KeyPressEvent):
             self.move_focus_down()
         

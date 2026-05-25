@@ -15,6 +15,8 @@ class ContentGenerator(ABC):
         pass
 
 
+from prompt_toolkit.key_binding import KeyBindingsBase
+
 class ExpandableControl(UIControl):
     def __init__(
         self,
@@ -22,11 +24,15 @@ class ExpandableControl(UIControl):
         style: str = "",
         min_width: int = 1,
         min_height: int = 1,
+        key_bindings: KeyBindingsBase | None = None,
+        focusable: bool = False,
     ):
         self.content_generator = content_generator
         self.min_width = min_width
         self.min_height = min_height
         self.style = style
+        self.key_bindings = key_bindings
+        self._focusable = focusable
     
 
     def create_content(self, width: int, height: int) -> UIContent:
@@ -37,6 +43,12 @@ class ExpandableControl(UIControl):
             line_count=height,
             show_cursor=False
         )
+
+    def is_focusable(self) -> bool:
+        return self._focusable
+
+    def get_key_bindings(self) -> KeyBindingsBase | None:
+        return self.key_bindings
 
     def preferred_width(self, max_available_width: int) -> int:
         return self.min_width

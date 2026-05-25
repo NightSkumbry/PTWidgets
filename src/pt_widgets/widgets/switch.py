@@ -24,6 +24,7 @@ class SwitchType(Enum):
     TICK_IN_BOX = ('☐', '☑')
     CROSS_IN_BOX = ('☐', '☒')
     HALF_BLOCK = ('[▌]', '[▐]')
+    NONE = ('', '')
 
 
 @dataclass
@@ -139,7 +140,7 @@ class Switch:
                 ])
 
         inner_content = [self.text_control]
-        spacer = Window(width=1, dont_extend_width=True, style=self._get_switch_style)
+        spacer = Window(width=1, dont_extend_width=True, style=self._get_text_style)
         
         if self.switch_before_text:
             inner_content = [self.switch_control, spacer] + inner_content
