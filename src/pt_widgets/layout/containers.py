@@ -42,6 +42,8 @@ class ConditionalContainer(PTConditionalContainer):
         self.alternative_widget = alternative_content
 
     def get_children(self) -> list[Container]:
+        # Return the container itself to preserve modal/keybindings property 
+        # in the layout tree.
         if self.filter():
             return [to_container(self.widget)]
         elif self.alternative_widget is not None:
@@ -57,6 +59,7 @@ class WrapperContainer(Container):
         self.container = to_container(content)
     
     def get_children(self) -> list[Container]:
+        # Return the wrapped container as a child to maintain hierarchy.
         return [self.container]
     
     def reset(self) -> None:
@@ -431,10 +434,11 @@ class GridSplit(Container):
         
         # Calculate widths.
         dimensions = []
-        for column in range(len(children[0])):
-            dimensions.append(max_layout_dimensions(
-                [r[column].preferred_width(width) for r in self._all_children]
-            ))
+        if children:
+            for column in range(len(children[0])):
+                dimensions.append(max_layout_dimensions(
+                    [r[column].preferred_width(width) for r in self._all_children]
+                ))
         preferred_dimensions = [d.preferred for d in dimensions]
         
         # Sum dimensions
@@ -516,11 +520,7 @@ class GridSplit(Container):
                 )
                 xpos += width
                 
-            # Fill in the remaining space. This happens when a child control
-            # refuses to take more space and we don't have any padding. Adding a
-            # dummy child control for this (in `self._all_children`) is not
-            # desired, because in some situations, it would take more space, even
-            # when it's not required. This is required to apply the styling.
+            # Fill in the remaining space.
             remaining_width = write_position.xpos + write_position.width - xpos
             if remaining_width > 0:
                 self._remaining_space_window.write_to_screen(
@@ -534,11 +534,7 @@ class GridSplit(Container):
             
             ypos += height
         
-        # Fill in the remaining space. This happens when a child control
-        # refuses to take more space and we don't have any padding. Adding a
-        # dummy child control for this (in `self._all_children`) is not
-        # desired, because in some situations, it would take more space, even
-        # when it's not required. This is required to apply the styling.
+        # Fill in the remaining space.
         remaining_height = write_position.ypos + write_position.height - ypos
         if remaining_height > 0:
             self._remaining_space_window.write_to_screen(
@@ -614,19 +610,28 @@ class GridSplit(Container):
         
         ypos = write_position.ypos
         xpos = write_position.xpos
-        real_children = self.get_children_grid()
+        
+        # Logical items in horizontal direction (columns) are slightly tricky 
+        # in GridSplit because they are just children of rows.
+        # But for write positions, we want to know the boundaries of each column.
         height = max(write_position.height, min(write_position.height, sum(sizesY)))
         
         res = []
-        all_children = self._all_children
-        
+        all_children_rows = self._all_children
+        if not all_children_rows:
+            return []
+            
+        first_row = all_children_rows[0]
+        # Identify columns that are NOT padding columns
         i = 0
-        for c, width in zip(all_children[0], sizesX):
-            if i < len(real_children) and real_children[0] and c == real_children[0][i]:
-                res.append(WritePosition(xpos, ypos, width, height))
-                i += 1
-
-            xpos += width
+        current_x = xpos
+        for c, width in zip(first_row, sizesX):
+            # A column is a logical column if at least one row's element in this column is a real child.
+            # Using self.flat_children is a robust way to check if it's a real child.
+            if any(row[i] in self.flat_children for row in all_children_rows):
+                res.append(WritePosition(current_x, ypos, width, height))
+            current_x += width
+            i += 1
         
         return res
          
@@ -647,20 +652,13 @@ class GridSplit(Container):
         xpos = write_position.xpos
         width = write_position.width
         
-        all_children = self._all_children
-        real_children = self.get_children_grid()
-        i = 0
+        all_children_rows = self._all_children
         wp = []
-        for row, height in zip(all_children, sizesY):
-            if i < len(real_children) and real_children[i] and row[0] == real_children[i][0]:
-                wp.append(WritePosition(xpos, ypos, width, height))
-                i += 1
-            ypos += height
+        current_y = ypos
+        for row, height in zip(all_children_rows, sizesY):
+            # A row is a logical row if at least one element in it is a real child.
+            if any(c in self.flat_children for c in row):
+                wp.append(WritePosition(xpos, current_y, width, height))
+            current_y += height
         
         return wp
-
-
-    
-    
-    
-    
